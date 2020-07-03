@@ -1,0 +1,70 @@
+stages:
+  - stage-build
+  - stage-validate
+  - stage-pruning
+
+### VARIABLES ###
+# lowercase variables = local vars
+# uppercase variables = CI-CD Secret vars
+
+variables:
+
+## Images
+  checkpackage_image: "vdc-tools-registry.af.multis.p.fti.net/utils/checkpackages-py:stable"
+  delimages_image: "pfs-artifactory-docker.artifactory.si.francetelecom.fr/delimages:stable"
+
+## checkpackage variables
+  img_tag: ${CI_COMMIT_TAG}
+  img_name: ${CI_PROJECT_PATH}
+  registry_url: "service-tms-docker.artifactory.si.francetelecom.fr"
+  registry_user: ${NETSNIFF_LDAP_USER}
+  registry_pass: ${NETSNIFF_LDAP_PASSWORD}
+  pushlatest: "True"
+  pushimage: "True"
+  pushlongtag: "True"
+  version_from_tag: "True"
+  repository: "service-tms-docker"
+  artifactory_url: https://${registry_url}
+  max_images: 10
+
+## Swarm
+  SWARM_USER: $NETSNIFF_LDAP_USER
+  SWARM_TOKEN: $NETSNIFF_KEYTAB
+  DOCKER_PORT: 2375
+  SWARM_USER: "root"
+  SWARM_CONTROLLER_USER: "netsniff-app"
+
+job:build-and-push:
+  stage: stage-build
+  image: "$checkpackage_image"
+  script:
+    - checkpackages | tee -a build_output.log
+  artifacts:
+    paths:
+      - build_output.log
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  except:
+    - branches
+
+job:validate:
+  stage: stage-validate
+  image: "$checkpackage_image"
+  script:
+    - check_warnings build_output.log
+  allow_failure: true
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  except:
+    - branches
+
+job:prune_images:
+  stage: stage-pruning
+  image: "$delimages_image"
+  script:
+    - script -eqf /dev/null -c "delimages  --verify /etc/ssl/certs/ca-certificates.crt  --af-url ${artifactory_url} --username \"${registry_user}\"  --password \"${registry_pass}\"  --repository ${repository} --image-path ${img_name} --keep-last ${max_images}"
+  allow_failure: true
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  except:
+    - branches
