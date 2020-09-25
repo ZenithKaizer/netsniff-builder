@@ -17,8 +17,8 @@ variables:
   img_tag: ${CI_COMMIT_TAG}
   img_name: ${CI_PROJECT_PATH}
   registry_url: "service-tms-docker.artifactory.si.francetelecom.fr"
-  registry_user: ${NETSNIFF_LDAP_USER}
-  registry_pass: ${NETSNIFF_LDAP_PASSWORD}
+  registry_user: "${REGISTRY_USER}"
+  registry_pass: "${REGISTRY_PASS}"
   pushlatest: "True"
   pushimage: "True"
   pushlongtag: "True"
