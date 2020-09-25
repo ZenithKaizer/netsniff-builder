@@ -1,17 +1,17 @@
 stages:
-  - stage-build
-  - stage-validate
-  - stage-pruning
+  - build
+  - validate
+  - clean
+
+include:
+  - project: 'team-scp/tools-for-ci-cd'
+    file: 'checkpackages.yml'
 
 ### VARIABLES ###
 # lowercase variables = local vars
-# uppercase variables = CI-CD Secret vars
+# uppercase variables = CI-CD Secret vars or Git vars
 
 variables:
-
-## Images
-  checkpackage_image: "vdc-tools-registry.af.multis.p.fti.net/utils/checkpackages-py:stable"
-  delimages_image: "pfs-artifactory-docker.artifactory.si.francetelecom.fr/delimages:stable"
 
 ## checkpackage variables
   img_tag: ${CI_COMMIT_TAG}
@@ -34,31 +34,17 @@ variables:
   SWARM_USER: "root"
   SWARM_CONTROLLER_USER: "netsniff-app"
 
-job:build-and-push:
-  stage: stage-build
-  image: "$checkpackage_image"
-  script:
-    - checkpackages | tee -a build_output.log
-  artifacts:
-    paths:
-      - build_output.log
+job:build:
+  extends: .build:docker
   only:
     - tags
 
 job:validate:
-  stage: stage-validate
-  image: "$checkpackage_image"
-  script:
-    - check_warnings build_output.log
-  allow_failure: true
+  extends: .validate:docker
   only:
     - tags
 
-job:prune_images:
-  stage: stage-pruning
-  image: "$delimages_image"
-  script:
-    - script -eqf /dev/null -c "delimages  --verify /etc/ssl/certs/ca-certificates.crt  --af-url ${artifactory_url} --username \"${registry_user}\"  --password \"${registry_pass}\"  --repository ${repository} --image-path ${img_name} --keep-last ${max_images}"
-  allow_failure: true
+job:clean:
+  extends: .clean:docker
   only:
     - tags
