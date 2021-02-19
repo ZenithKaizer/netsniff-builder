@@ -47,7 +47,7 @@ def replace_xymon_host(global_config):
     """Read xymon_host from conf with envvars"""
     xymon_host = global_config['xymon_host']
     cut_envvars = xymon_host[-(len(xymon_host)-len("$SERVICENAME_")-len("$ENV_")):]
-    xymon_host = os.path.expandvars('${SERVICENAME}_${ENV}_') + cut_envvars
+    xymon_host = os.path.expandvars('${SERVICENAME}.${ENV}.') + cut_envvars
     return xymon_host
 
 def rewrite(config, url, user_agent):
@@ -717,7 +717,7 @@ def get_load_from_har_without_list(page, check_conf):
             lt_load_matches = []
             no_matches = []
             duplicate_matches = []
-            page_load = page.pageTimings['onLoad']
+            page_load = page.pageTimings['onContentLoad']
 
             for entry in page.entries:
                 load_time = entry['time']

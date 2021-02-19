@@ -59,6 +59,8 @@ if [ "$ENV" == "dev" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_dev_sph.cfg /etc/xymon/xymonclient.cfg
 elif [ "$ENV" == "prod" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
+elif [ "$ENV" == "preprod" ]; then
+    ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
 elif [ "$ENV" == "rec" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_rec.cfg /etc/xymon/xymonclient.cfg
 else
