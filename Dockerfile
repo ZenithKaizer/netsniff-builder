@@ -9,17 +9,18 @@ MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 
-LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.net"
-LABEL org.opencontainers.image.description="Service netsniff to check page ressources (content is in HTTPS and response code)"
-LABEL org.opencontainers.image.documentation="https://gitlab.si.francetelecom.fr/service-netsniff/netsniff/blob/master/README.md"
-LABEL org.opencontainers.image.source="https://gitlab.si.francetelecom.fr/pfs-hporange/netsniff"
-LABEL org.opencontainers.image.title="Service Netsniff"
-LABEL org.opencontainers.image.url="https://gitlab.si.francetelecom.fr/service-netsniff/netsniff/blob/master/README.md"
-LABEL org.opencontainers.image.vendor="dfy.hbx.pfs-scp.all@list.orangeportails.net"
-LABEL org.opencontainers.image.version="{{ version }}"
+LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
+      org.opencontainers.image.description="Service netsniff to check page ressources (content is in HTTPS and response code)" \
+      org.opencontainers.image.documentation="https://gitlab.si.francetelecom.fr/service-netsniff/service-netsniff-netsniff-gtags-builder/blob/master/README.md" \
+      org.opencontainers.image.source=""https://gitlab.si.francetelecom.fr/service-netsniff/service-netsniff-netsniff-gtags-builder/blob/master/README.md"" \
+      org.opencontainers.image.title="Service Netsniff" \
+      org.opencontainers.image.url="service-tms-docker.artifactory.si.francetelecom.fr/service-tms-docker/netsniff" \
+      org.opencontainers.image.vendor="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
+      org.opencontainers.image.version="{{ version }}"
 
 ENV DUMB_INIT_VERSION=1.2.2 \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    VHYPE_USE_NETWORKLB="false"
 
 COPY ext-debian-nodejs.list /etc/apt/sources.list.d/ext-debian-nodejs.list
 RUN curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
@@ -30,6 +31,7 @@ COPY ./requirements.txt .
 
 RUN echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic main" > /etc/apt/sources.list.d/mdcs_bionic_prod.list \
   && echo "deb https://artifactory.packages.install-os.multis.p.fti.net/pfs-noh_debian_vdc bionic all" > /etc/apt/sources.list.d/vhype.list \
+  && echo "deb https://artifactory.si.francetelecom.fr:443/dom-rsx-debian/ bionic all" > /etc/apt/sources.list.d/dom-rsx-debian.list \
   && echo "deb http://ubuntu.packages.install-os.multis.p.fti.net/hebex-production xenial infra" > /etc/apt/sources.list.d/monxymon_lib.list
 
 
@@ -45,7 +47,8 @@ RUN apt-get update && \
     python-webpy \
     graphviz \
     curl \
-    vhype \
+    vhype2=* \
+    net-tools=* \
     vim \
     mony=0.7.0 \
     && pip3 install wheel \
