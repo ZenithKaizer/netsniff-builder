@@ -9,7 +9,7 @@ KEYSTONE_USER_DOMAIN_NAME = "scp"
 KEYSTONE_PROJECT_DOMAIN_NAME = "scp"
 CONST_OS_ENDPOINT_TYPE = "internal"
 KEYSTONE_PROJECT_NAME = "copfs_scp_netsniff"
-CONTAINER_NAME = "netsniff-attachments"
+CONTAINER_NAME = "netsniff-data"
 CONST_OBJECT_EXPIRATION_IN_SECONDS = "5184000"
 
 # For xymon instancej

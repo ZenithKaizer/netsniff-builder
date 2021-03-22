@@ -352,9 +352,7 @@ def upload_attachment(swift_conn, content, mime_type):
                 CONTAINER_NAME,
                 file_digest,
                 contents=content,
-                content_type=mime_type,
-                headers={'X-Delete-After': CONST_OBJECT_EXPIRATION_IN_SECONDS}
-            )
+                content_type=mime_type
             return file_digest
     except Exception as upload_err:
         logger.exception(upload_err)
