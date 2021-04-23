@@ -19,6 +19,8 @@ from variables import *
 import pprint
 import operator
 
+MAX_RECURSION = 4
+
 def MultiSub(dict_, url):
     """To make a multitude subtitutions and return the rewrited url"""
     if len(dict_) == 0:
@@ -403,10 +405,9 @@ def preprocess_tree(page, check_conf):
             return current_iteration
 
 
-def create_recurstree(check_conf, page, current_iteration=None, merge_iterations=None):
+def create_recurstree(check_conf, page, current_iteration=None, merge_iterations=None, recursion_depth=0):
 
-    conf = reorganize_for_tests(
-        "init_tree", check_conf)
+    conf = reorganize_for_tests("init_tree", check_conf)
 
     if conf:
         if conf['active']:
@@ -419,7 +420,6 @@ def create_recurstree(check_conf, page, current_iteration=None, merge_iterations
             if len(current_iteration) == 0:
                 return merge_iterations
 
-
             merge_iterations.append(current_iteration)
             for e in page.entries:
                 for _list in current_iteration:
@@ -428,7 +428,6 @@ def create_recurstree(check_conf, page, current_iteration=None, merge_iterations
                             value_chars_escaped = re.escape(value)
                             p = re.compile(value_chars_escaped, flags=re.IGNORECASE)
                             if '_initiator' in e and p.search(e['_initiator']) is not None:
-
                                 current_list.append({
                                     'Initiator': e['_initiator'],
                                     'URL': e['request']['url'],
@@ -442,7 +441,8 @@ def create_recurstree(check_conf, page, current_iteration=None, merge_iterations
 
             current_iteration = current_list
 
-            create_recurstree(check_conf, page, current_iteration, merge_iterations)
+            if recursion_depth < MAX_RECURSION:
+                create_recurstree(check_conf, page, current_iteration, merge_iterations, recursion_depth + 1)
             return merge_iterations
 
 
