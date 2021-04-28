@@ -48,8 +48,10 @@ def read_conf(filename):
 def replace_xymon_host(global_config):
     """Read xymon_host from conf with envvars"""
     xymon_host = global_config['xymon_host']
-    cut_envvars = xymon_host[-(len(xymon_host)-len("$SERVICENAME_")-len("$ENV_")):]
-    xymon_host = os.path.expandvars('${SERVICENAME}.${ENV}.') + cut_envvars
+    servicename = os.getenv('SERVICENAME')
+    env = os.getenv('ENV')
+    xymon_host = xymon_host.replace("$SERVICENAME", servicename).replace("$ENV", env)
+    print(f'replace_xymon_host xymon_host : {xymon_host}\n')
     return xymon_host
 
 def rewrite(config, url, user_agent):
