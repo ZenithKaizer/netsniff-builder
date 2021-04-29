@@ -97,7 +97,8 @@ def get_har(CONST_PROGRAM, CONST_MAIN_SCRIPT,
 
     except subprocess.CalledProcessError as err:
         logger.exception('python catched error')
-        raise
+        logger.exception(f'Task skipped)')
+        update_xymon_status(xymoncli, user_agent, url, nodejs_err=err.stderr)
 
     try:
         full_page = u.open_screenshot_attachment(url_sub, 'fullpage')
@@ -473,14 +474,10 @@ def main():
             except Exception as err:
                 logger.error('Thread exception detected')
                 logger.error(f'Task skipped)')
-                
                 pp = u.pprint.PrettyPrinter(indent=1, depth=1, width=20)
-                err_reformated = pp.pformat(str(err))
-                
-                if 'nodejs' in err_reformated:
-                    update_xymon_status(xymoncli, user_agent, url, nodejs_err=err_reformated)
-                else:
-                    update_xymon_status(xymoncli, user_agent, url, python_err=err_reformated)
+                python_err_reformated = pp.pformat(str(err))
+    
+                update_xymon_status(xymoncli, user_agent, url, python_err=python_err_reformated)
             finally:
                 q.task_done()
 
