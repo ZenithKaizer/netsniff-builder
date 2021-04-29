@@ -488,9 +488,18 @@ def main():
       worker.start()
       threads.append(worker)
 
-    for global_filename in CONF_NETSNIFF:
+    print(f'\n CONF_NETSNIFF: {CONF_NETSNIFF }\n')
+    print(  f'CHECK_NETSNIFF: {CHECK_NETSNIFF}\n')
+
+    # for global_filename in CONF_NETSNIFF:
+    # TEST multi-confs
+    for i, global_filename in enumerate(CONF_NETSNIFF, 1):
+        print(f'global_filename {i}:', global_filename)
         global_config = u.read_conf(global_filename)
-        for check_filename in CHECK_NETSNIFF:
+        # for check_filename in CHECK_NETSNIFF:
+        # TEST multi-confs
+        for i, check_filename in enumerate(CHECK_NETSNIFF, 1):
+            print(f'\tcheck_filename {i}:', check_filename)
             check_conf = u.read_conf(check_filename)
             if check_filename.stem[:-len('.checks')] == global_filename.stem[:-len('.conf')]:
                 if global_config['active']:
@@ -509,6 +518,32 @@ def main():
                     logger.info(f'Processing {url} Complete')
                 else:
                     logger.info(f"Site config <{global_config['active']}> in {global_filename}")
+
+    # TEST multi-confs
+    print('\n')
+
+
+    # for global_filename in CONF_NETSNIFF:
+    #     global_config = u.read_conf(global_filename)
+    #     for check_filename in CHECK_NETSNIFF:
+    #         check_conf = u.read_conf(check_filename)
+    #         if check_filename.stem[:-len('.checks')] == global_filename.stem[:-len('.conf')]:
+    #             if global_config['active']:
+    #                 xymoncli = init_xymon_object(global_config)
+    #                 for url in global_config['urls']:
+    #                     for user_agent in global_config['request_user_agent']:
+    #                         attachments = []
+    #                         conf_unit = copy.deepcopy(global_config)
+    #                         u.rewrite(conf_unit, url, user_agent)
+    #                         x = dict(global_filename=global_filename, global_config=global_config, check_conf=check_conf,
+    #                             conf_unit=conf_unit, attachments=attachments, xymoncli=xymoncli, user_agent=user_agent, url=url)
+    #                         q.put(x)
+    #                         logger.info(f'Processing {url} - Task added in the Queue')
+    #                 q.join()
+    #                 send_xymon_status(xymoncli)
+    #                 logger.info(f'Processing {url} Complete')
+    #             else:
+    #                 logger.info(f"Site config <{global_config['active']}> in {global_filename}")
 
     q.join()
     logging.info('Processing all tasks complete')

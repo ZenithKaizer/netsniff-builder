@@ -25,7 +25,8 @@ CONST_MAIN_SCRIPT = "/usr/local/bin/netsniff-url"
 
 # For synchronize check_conf and global_conf
 ATTACHMENTS_DIR = Path("/home/pptruser/attachments")
-CONF_DIR = Path("/etc/netsniff/netsniff-conf/confs")
+CONFIG_NAME = "hporange"
+CONF_DIR = Path("/etc/netsniff/netsniff-conf", CONFIG_NAME)
 CONF_NETSNIFF = list(CONF_DIR.glob('*conf.yml'))
 CHECK_NETSNIFF = list(CONF_DIR.glob('*checks.yml'))
 
