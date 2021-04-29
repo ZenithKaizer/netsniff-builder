@@ -38,8 +38,8 @@ if [ -z "VHYPE_VIP_NETSNIFF_HTTPS" ]; then
 fi
 
 if [ -n "$VHYPE_PASS" ]; then
-    echo "Cleaning up VIP"
-    /usr/local/bin/cleanup_vip
+#    echo "Cleaning up VIP"
+#    /usr/local/bin/cleanup_vip
     echo "add node in VIP"
     vhype -v use-environment add
 fi
@@ -59,9 +59,8 @@ if [ "$ENV" == "dev" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_dev_sph.cfg /etc/xymon/xymonclient.cfg
 elif [ "$ENV" == "prod" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
-elif [ "$ENV" == "preprod" ]; then
-    ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
-elif [ "$ENV" == "rec" ]; then
+    sed -i 's/\$ENV.//g' /etc/netsniff/netsniff-conf/hporange/hporange.conf.yml
+elif [ "$ENV" == "rec" ] || [ "$ENV" == "preprod" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_rec.cfg /etc/xymon/xymonclient.cfg
 else
     echo "Nothing will be send to xymon"
