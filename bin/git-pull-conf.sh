@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd /etc/netsniff/netsniff-conf/confs
+cd /etc/netsniff/netsniff-conf
 git pull
