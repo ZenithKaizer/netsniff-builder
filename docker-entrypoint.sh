@@ -59,7 +59,6 @@ if [ "$ENV" == "dev" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_dev_sph.cfg /etc/xymon/xymonclient.cfg
 elif [ "$ENV" == "prod" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
-    sed -i 's/\$ENV.//g' /etc/netsniff/netsniff-conf/hporange/hporange.conf.yml
 elif [ "$ENV" == "rec" ] || [ "$ENV" == "preprod" ]; then
     ln -sf /home/pptruser/xymon/xymonclient_rec.cfg /etc/xymon/xymonclient.cfg
 else

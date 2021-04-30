@@ -50,6 +50,8 @@ def replace_xymon_host(global_config):
     xymon_host = global_config['xymon_host']
     servicename = os.getenv('SERVICENAME')
     env = os.getenv('ENV')
+    if env.lower() == "prod":
+        xymon_host = xymon_host.replace("$ENV.", "")
     xymon_host = xymon_host.replace("$SERVICENAME", servicename).replace("$ENV", env)
     print(f'replace_xymon_host xymon_host : {xymon_host}\n')
     return xymon_host
