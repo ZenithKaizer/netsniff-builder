@@ -1,0 +1,12 @@
+# mm hh dd  MMM DAY [user] command
+
+#  0  4  *   *  *   pptruser   echo "cron command run at $(date +%T)" >> /home/pptruser/super-c.log
+
+ */3  *  *   *  *   pptruser   echo "cron command at $(date +%T)" >> /home/pptruser/super-c.log
+
+  52  *  *   *  *   pptruser   mv /home/pptruser/super-4.log /home/pptruser/super-5.log
+  54  *  *   *  *   pptruser   mv /home/pptruser/super-3.log /home/pptruser/super-4.log
+  56  *  *   *  *   pptruser   mv /home/pptruser/super-2.log /home/pptruser/super-3.log
+  58  *  *   *  *   pptruser   mv /home/pptruser/super-1.log /home/pptruser/super-2.log
+   0  *  *   *  *   pptruser   mv /home/pptruser/super-c.log /home/pptruser/super-1.log
+

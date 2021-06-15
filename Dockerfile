@@ -3,11 +3,25 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
 RUN apt update && apt install -y --no-install-recommends gcc python3.6 python3-pip
 RUN python3 -m pip install --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=048b95b48b708983effb2e5c935a1ef8483d9e3e
+
+RUN curl -fsSLO "$SUPERCRONIC_URL" \
+ && echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - \
+ && chmod +x "$SUPERCRONIC" \
+ && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
+ && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic 
+
 FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
+COPY ./supercronictab /etc/crontab
+RUN chmod 0644 /etc/crontab
+
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
+COPY --from=builder /usr/local/bin/supercronic /usr/local/bin/supercronic
 
 LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
       org.opencontainers.image.description="Service netsniff to check page ressources (content is in HTTPS and response code)" \
