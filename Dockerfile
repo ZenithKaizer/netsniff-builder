@@ -18,7 +18,9 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
 COPY ./supercronictab /etc/crontab
-RUN chmod 0644 /etc/crontab
+#RUN chmod 0644 /etc/crontab
+RUN chown pptruser /etc/crontab
+RUN chmod 0664 /etc/crontab
 
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 COPY --from=builder /usr/local/bin/supercronic /usr/local/bin/supercronic
@@ -43,9 +45,9 @@ WORKDIR /root/
 
 COPY ./requirements.txt .
 
-RUN echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic main" > /etc/apt/sources.list.d/mdcs_bionic_prod.list \
-  && echo "deb https://artifactory.packages.install-os.multis.p.fti.net/pfs-noh_debian_vdc bionic all" > /etc/apt/sources.list.d/vhype.list \
+RUN  echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic main" > /etc/apt/sources.list.d/mdcs_bionic_prod.list \
   && echo "deb https://artifactory.si.francetelecom.fr:443/dom-rsx-debian/ bionic all" > /etc/apt/sources.list.d/dom-rsx-debian.list \
+  && echo "deb https://artifactory.packages.install-os.multis.p.fti.net/pfs-noh_debian_vdc bionic all" > /etc/apt/sources.list.d/vhype.list \
   && echo "deb http://ubuntu.packages.install-os.multis.p.fti.net/hebex-production xenial infra" > /etc/apt/sources.list.d/monxymon_lib.list
 
 
