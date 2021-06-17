@@ -17,10 +17,8 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
-COPY ./supercronictab /etc/crontab
+#COPY ./supercronictab /etc/crontab
 #RUN chmod 0644 /etc/crontab
-RUN chown pptruser /etc/crontab
-RUN chmod 0664 /etc/crontab
 
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 COPY --from=builder /usr/local/bin/supercronic /usr/local/bin/supercronic
@@ -94,6 +92,9 @@ COPY --chown=pptruser bin/git-pull-conf.sh /usr/local/bin/git-pull-conf.sh
 COPY --chown=pptruser lib/ /home/pptruser/.lib/
 COPY --chown=pptruser config/xymon/ /home/pptruser/xymon/
 COPY --chown=pptruser bin/cleanup_vip.py /usr/local/bin/cleanup_vip
+
+COPY --chown=pptruser ./supercronictab /etc/crontab
+RUN chmod 0664 /etc/crontab
 
 RUN chmod +x /usr/local/bin/netsniff /usr/local/bin/netsniff-url /usr/local/bin/ws-reload-git /usr/local/bin/git-pull-conf.sh /usr/local/bin/cleanup_vip
 
