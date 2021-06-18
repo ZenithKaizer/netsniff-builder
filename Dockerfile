@@ -17,6 +17,7 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
+# for root owned unmodifiable crontab
 #COPY ./supercronictab /etc/crontab
 #RUN chmod 0644 /etc/crontab
 
@@ -93,6 +94,7 @@ COPY --chown=pptruser lib/ /home/pptruser/.lib/
 COPY --chown=pptruser config/xymon/ /home/pptruser/xymon/
 COPY --chown=pptruser bin/cleanup_vip.py /usr/local/bin/cleanup_vip
 
+# for pptruser owned modifiable crontab
 COPY --chown=pptruser ./supercronictab /etc/crontab
 RUN chmod 0664 /etc/crontab
 
