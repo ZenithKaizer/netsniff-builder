@@ -28,11 +28,11 @@ if [ -z "$VHYPE_USER" ]; then
 fi
 
 if [ -z "$VHYPE_PASS" ]; then
-    echo "Varible VHYPE_PASS must be defined"
+    echo "Variable VHYPE_PASS must be defined"
     exit 1
 fi
 
-if [ -z "VHYPE_VIP_NETSNIFF_HTTPS" ]; then
+if [ -z "$VHYPE_VIP_NETSNIFF_HTTPS" ]; then
     echo "Variable VHYPE_VIP_NETSNIFF_HTTPS must be defined"
     exit 1
 fi
