@@ -17,10 +17,6 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
 
-# for root owned unmodifiable crontab
-#COPY ./supercronictab /etc/crontab
-#RUN chmod 0644 /etc/crontab
-
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
 COPY --from=builder /usr/local/bin/supercronic /usr/local/bin/supercronic
 
@@ -54,7 +50,7 @@ RUN apt-get update && \
     apt-get install -y \
     aptitude \
     python-monxymonlib \
-    python3.6 \
+    python3.7 \
     python3-pip \
     python3-setuptools \
     git \
