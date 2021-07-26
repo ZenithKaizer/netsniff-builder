@@ -1,6 +1,6 @@
 FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
 
-RUN apt update && apt install -y --no-install-recommends gcc python3.6 python3-pip
+RUN apt update && apt install -y --no-install-recommends gcc python3.7 python3-pip
 RUN python3 -m pip install --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
 ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
@@ -50,7 +50,6 @@ RUN apt-get update && \
     apt-get install -y \
     aptitude \
     python-monxymonlib \
-    python3.7 \
     python3-pip \
     python3-setuptools \
     git \
