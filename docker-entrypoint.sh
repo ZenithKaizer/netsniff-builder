@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/bin/bash -e
 
-set -e
+/usr/bin/python3 -V
+echo
+
+/usr/bin/python3 -m pip -V
+echo
 
 if [ -z "$GITLAB_USER" ]; then
     echo "Variable GITLAB_USER must be defined"
