@@ -1,17 +1,19 @@
 FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
 
-RUN apt update && apt install -y --no-install-recommends gcc python3.6 python3-pip
-RUN python3 -m pip install --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
+RUN apt update \
+ && apt install -y --no-install-recommends gcc python3.6 python3-pip
+RUN python3 -m pip install \
+            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
 ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
     SUPERCRONIC=supercronic-linux-amd64 \
     SUPERCRONIC_SHA1SUM=048b95b48b708983effb2e5c935a1ef8483d9e3e
 
-RUN curl -fsSLO "$SUPERCRONIC_URL" \
- && echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - \
- && chmod +x "$SUPERCRONIC" \
- && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
- && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic 
+RUN curl -fsSLO $SUPERCRONIC_URL \
+ && echo "$SUPERCRONIC_SHA1SUM  $SUPERCRONIC" | sha1sum -c - \
+ && chmod +x $SUPERCRONIC \
+ && mv $SUPERCRONIC /usr/local/bin/$SUPERCRONIC \
+ && ln -s /usr/local/bin/$SUPERCRONIC /usr/local/bin/supercronic
 
 FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
 
@@ -51,20 +53,19 @@ RUN echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic
 RUN apt update
 RUN apt upgrade -y
 
-RUN apt install -y aptitude \
-                   curl \
-                   git \
-                   graphviz \
-                   ipython3 \
-                   mony=0.7.0 \
-                   net-tools=* \
-                   nodejs \
+RUN apt install -y curl               \
+                   git                \
+                   graphviz           \
+                   ipython3           \
+                   less               \
+                   mony=0.7.0         \
+                   net-tools=*        \
+                   nodejs             \
                    python-monxymonlib \
-                   python-webpy \
-                   python3-distutils \
-                   python3-pip \
+                   python-webpy       \
+                   python3-pip        \
                    python3-setuptools \
-                   vhype2=* \
+                   vhype2=*           \
                    vim
 
 RUN pip3 install wheel
@@ -74,9 +75,9 @@ RUN python3 -m pip install -r requirements.txt \
                            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/
 
 RUN groupadd -r pptruser \
- && useradd -r -g pptruser -G audio,video pptruser \
+ && useradd -r -g pptruser -G audio,video pptruser          \
  && mkdir -p /home/pptruser/.lib /home/pptruser/.config/pip \
- && chown -R pptruser:pptruser /home/pptruser \
+ && chown -R pptruser:pptruser /home/pptruser               \
  && ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime \
  && echo "Europe/Paris" > /etc/timezone
 
@@ -84,7 +85,12 @@ RUN groupadd -r pptruser \
 RUN apt-get -qq clean \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+COPY --chown=pptruser iPython3-entry.sh /iPython3-entry.sh
+COPY --chown=pptruser iPython3.bashrc /home/pptruser/.bashrc
+
+RUN chmod +x /iPython3-entry.sh
+
 WORKDIR /home/pptruser
 USER pptruser
 
-CMD ["ipython3"]
+CMD ["/iPython3-entry.sh"]
