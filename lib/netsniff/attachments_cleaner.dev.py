@@ -9,8 +9,8 @@ import sys
 import time
 import urllib3
 
-from datetime import datetime, timedelta
 from colorlog import ColoredFormatter
+from datetime import datetime, timedelta
 from swiftclient.client import Connection
 from swiftclient.exceptions import ClientException
 # from swiftclient.service import SwiftService
@@ -26,32 +26,32 @@ MAX_DELETE_ERRORS = 1000
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-def setup_logging(log_level=logging.INFO):
+def setup_logging(log_simple, log_level):
     """Set up the logging."""
     date_format = '%Y-%m-%d:%H:%M:%S'
-    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)s'
-                               '[%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s',
+    if log_simple:
+        log_format = '%(asctime)s %(levelname)s %(message)s'
+        color_format = '%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s'
+    else:
+        log_format = '%(asctime)s,%(msecs)d %(levelname)s' \
+                     ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
+        color_format = '%(asctime)s,%(msecs)d %(log_color)s%(levelname)s%(reset)s' \
+                       ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
+    logging.basicConfig(format=log_format,
                         datefmt=date_format,
                         level=log_level)
-    color_format = '%(asctime)s,%(msecs)d %(log_color)s%(levelname)s%(reset)s' \
-                   ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
-    if color_format:
-        logging.getLogger().handlers[0].setFormatter(ColoredFormatter(
-            color_format,
-            datefmt=date_format,
-            reset=True,
-            log_colors={'DEBUG': 'cyan',
-                        'INFO': 'green',
-                        'WARNING': 'yellow',
-                        'ERROR': 'red',
-                        'CRITICAL': 'red'}
-        ))
+    logging.getLogger().handlers[0].setFormatter(ColoredFormatter(
+        color_format,
+        datefmt=date_format,
+        reset=True,
+        log_colors={'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+    ))
     set_up_logger = logging.getLogger(__name__)
     set_up_logger.setLevel(log_level)
     return set_up_logger
 
 
-def attempt_or_wait_socket(attempts, delay, failure_message, connection=None):
+def attempt_or_wait_socket(attempts, delay, failure_message, swift_conn=None):
     def decorator(func):
         def wrapper(*args, **kwargs):
             last_error = ''
@@ -64,11 +64,11 @@ def attempt_or_wait_socket(attempts, delay, failure_message, connection=None):
                 except socket.timeout:
                     time.sleep(delay)
             else:
-                if connection:
-                    connection.close()
+                if swift_conn:
+                    swift_connection_close(swift_conn)
                 if last_error:
                     logger.error(f'{failure_message} ({attempts} attempts).')
-                    logger.exception(last_error)
+                    logger.exception(last_error, exc_info=logger.getEffectiveLevel() == logging.DEBUG)
                 else:
                     logger.error(f'Socket always in timeout ({attempts} attempts).')
                 sys.exit()
@@ -97,7 +97,7 @@ def delete_or_wait_socket(attempts, delay):
 
 
 @attempt_or_wait_socket(15, 1, 'Swift client connection error')
-def swift_initiate_connection():
+def swift_connection_initiate():
     # Connect to Media Storage
     # Create session
     authurl = variables.KEYSTONE_AUTH_URL
@@ -118,16 +118,24 @@ def swift_initiate_connection():
                       retries=3)
 
 
+def swift_connection_close(connection):
+    try:
+        connection.close()
+    except (ClientException, socket.timeout):
+        pass
+
+
 def pretty_date(date_string):
     return datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S').strftime('%b %_d %T')
 
 
 def get_old_date(args_date):
     if args_date:
-        if not re.match(DATETIME_REGEXP, args_date):
-            print('Date limit should be more sensible')
+        if re.match(DATETIME_REGEXP, args_date):
+            return args_date
+        else:
+            logger.error('Incorrect date provided')
             sys.exit()
-        return args_date
     else:
         old_date = datetime.now() - timedelta(days=31)
         return old_date.isoformat()
@@ -142,7 +150,8 @@ def get_objects(swift_conn):
         return swift_conn.get_container(variables.CONTAINER_NAME)[1]
     else:
         logger.info(f'Container {variables.CONTAINER_NAME} does not exist - Will do nothing.')
-        return None
+        swift_connection_close(swift_conn)
+        sys.exit()
 
 
 @delete_or_wait_socket(5, .1)
@@ -161,14 +170,14 @@ def delete_old_objects(swift_conn, all_objects, oldest_allowed, dry_run):
     if dry_run:
         first_name, first_date = old_objects[0]['name'], old_objects[0]['last_modified']
         last_name, last_date = old_objects[-1]['name'], old_objects[-1]['last_modified']
-        print(f'Objects to delete: {len(old_objects)}\n'
-              f'from  "{first_name}" {pretty_date(first_date)}  ({first_date})\n'
-              f'up to "{last_name}" {pretty_date(last_date)}  ({last_date})')
+        logger.info(f'Objects to delete: {len(old_objects)}\n'
+                    f'from  "{first_name}" {pretty_date(first_date)}  ({first_date})\n'
+                    f'up to "{last_name}" {pretty_date(last_date)}  ({last_date})')
     else:
         logger.info(f'Objects to delete: {len(old_objects)}')
         deleted_count = 0
         errors = 0
-        for number, curr_obj in enumerate(old_objects[:10], start=1):
+        for number, curr_obj in enumerate(old_objects, start=1):
             success = delete_object(swift_conn, curr_obj, number)
             if success:
                 deleted_count += 1
@@ -182,11 +191,13 @@ def delete_old_objects(swift_conn, all_objects, oldest_allowed, dry_run):
                 logger.error(f'Aborted after over {MAX_DELETE_ERRORS} deletion errors !')
             else:
                 logger.error(f'Deletion errors: {errors}')
+    swift_connection_close(swift_conn)
 
 
 if __name__ != '__main__':
 
-    logger = setup_logging(logging.INFO)
+    logger = setup_logging(log_simple=False,
+                           log_level=logging.INFO)
 
 else:
 
@@ -204,14 +215,13 @@ else:
         print('date!')
         sys.exit()
 
-    logger = setup_logging(logging.DEBUG if ARGS.verbose else logging.INFO)
-
-    swift_connection = swift_initiate_connection()
-
-    container_objects = get_objects(swift_connection)
+    logger = setup_logging(log_simple=ARGS.date != '',
+                           log_level=logging.DEBUG if ARGS.verbose else logging.INFO)
 
     oldest_limit = get_old_date(ARGS.date)
 
-    delete_old_objects(swift_connection, container_objects, oldest_limit, ARGS.dry_run)
+    swift_connection = swift_connection_initiate()
 
-    swift_connection.close()
+    container_objects = get_objects(swift_connection)
+
+    delete_old_objects(swift_connection, container_objects, oldest_limit, ARGS.dry_run)
