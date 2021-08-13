@@ -13,7 +13,6 @@ from colorlog import ColoredFormatter
 from datetime import datetime, timedelta
 from swiftclient.client import Connection
 from swiftclient.exceptions import ClientException
-# from swiftclient.service import SwiftService
 
 # adding path /etc/netsniff to import variables
 sys.path.append('/etc/netsniff/')
@@ -24,6 +23,42 @@ DATETIME_REGEXP = r'^20\d\d-[01]\d(-[0-3]\d(T[0-2]\d:[0-5]\d(:[0-5]\d)?)?)?$'
 MAX_DELETE_ERRORS = 1000
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def pretty_date(date_string):
+    return datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S').strftime('%b %_d %T')
+
+
+def pretty_duration(secs):
+    if secs < 3600:
+        string = ''
+    else:
+        string = f'{secs // 3600}h'
+        secs = secs % 3600
+    if secs >= 60 or (string and secs):
+        if string:
+            string += f' {secs // 60:02}m'
+        else:
+            string = f'{secs // 60}m'
+        secs = secs % 60
+    if secs:
+        if string:
+            string += f' {secs:02}s'
+        else:
+            string = f'{secs} seconds'
+    return string
+
+
+def human_bytes(size):
+    if size < 1024:
+        string = f'{size} bytes'
+    elif size < 1024**2:
+        string = f'{size/1024:.1f} KB'
+    elif size < 1024**3:
+        string = f'{size/1024**2:.1f} MB'
+    else:
+        string = f'{size/1024**3:.1f} GB'
+    return string
 
 
 def setup_logging(log_simple, log_level):
@@ -51,7 +86,7 @@ def setup_logging(log_simple, log_level):
     return set_up_logger
 
 
-def attempt_or_wait_socket(attempts, delay, failure_message, swift_conn=None):
+def attempt_or_wait_socket(attempts, delay, failure_message):
     def decorator(func):
         def wrapper(*args, **kwargs):
             last_error = ''
@@ -64,8 +99,6 @@ def attempt_or_wait_socket(attempts, delay, failure_message, swift_conn=None):
                 except socket.timeout:
                     time.sleep(delay)
             else:
-                if swift_conn:
-                    swift_connection_close(swift_conn)
                 if last_error:
                     logger.error(f'{failure_message} ({attempts} attempts).')
                     logger.exception(last_error, exc_info=logger.getEffectiveLevel() == logging.DEBUG)
@@ -97,9 +130,13 @@ def delete_or_wait_socket(attempts, delay):
 
 
 @attempt_or_wait_socket(15, 1, 'Swift client connection error')
+def get_connection(connection_data):
+    # Create session
+    return Connection(**connection_data)
+
+
 def swift_connection_initiate():
     # Connect to Media Storage
-    # Create session
     authurl = variables.KEYSTONE_AUTH_URL
     auth_version = variables.KEYSTONE_AUTH_VERSION
     user = variables.KEYSTONE_USERNAME
@@ -108,14 +145,15 @@ def swift_connection_initiate():
                   'project_domain_name': variables.KEYSTONE_PROJECT_DOMAIN_NAME,
                   'project_name': variables.KEYSTONE_PROJECT_NAME,
                   'endpoint_type': variables.CONST_OS_ENDPOINT_TYPE}
-    return Connection(authurl=authurl,
-                      user=user,
-                      key=key,
-                      os_options=os_options,
-                      auth_version=auth_version,
-                      insecure=True,
-                      timeout=5,
-                      retries=3)
+    connection_data = {'authurl': authurl,
+                       'user': user,
+                       'key': key,
+                       'os_options': os_options,
+                       'auth_version': auth_version,
+                       'insecure': True,
+                       'timeout': 5,
+                       'retries': 3}
+    return get_connection(connection_data)
 
 
 def swift_connection_close(connection):
@@ -123,10 +161,6 @@ def swift_connection_close(connection):
         connection.close()
     except (ClientException, socket.timeout):
         pass
-
-
-def pretty_date(date_string):
-    return datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S').strftime('%b %_d %T')
 
 
 def get_old_date(args_date):
@@ -141,57 +175,91 @@ def get_old_date(args_date):
         return old_date.isoformat()
 
 
+@attempt_or_wait_socket(15, 1, 'Swift client error - account could not be loaded')
+def get_account(swift_conn):
+    return swift_conn.get_account()
+
+
 @attempt_or_wait_socket(15, 1, 'Swift client error - objects could not be loaded')
-def get_objects(swift_conn):
-    resp_headers, all_containers = swift_conn.get_account()
+def get_container(swift_conn, name):
+    return swift_conn.get_container(name)
+
+
+def get_objects(swift_conn, name):
+    resp_headers, all_containers = get_account(swift_conn)
     containers_found = [container for container in all_containers
-                        if container['name'] == variables.CONTAINER_NAME]
+                        if container['name'] == name]
     if containers_found:
-        return swift_conn.get_container(variables.CONTAINER_NAME)[1]
+        container_data = get_container(swift_conn, name)
+        objects_count = container_data[0]['x-container-object-count']
+        logger.info(f'Objects in container: {objects_count}')
+        return container_data[1]
     else:
-        logger.info(f'Container {variables.CONTAINER_NAME} does not exist - Will do nothing.')
+        logger.info(f'Container {name} does not exist.')
+        swift_connection_close(swift_conn)
+        sys.exit()
+
+
+def get_old_objects(swift_conn, all_objects, oldest_allowed):
+    old_objects = [obj for obj in all_objects if obj['last_modified'] < oldest_allowed]
+    if old_objects:
+        return old_objects
+    else:
+        logger.info(f'No object older enough.')
         swift_connection_close(swift_conn)
         sys.exit()
 
 
 @delete_or_wait_socket(5, .1)
-def delete_object(swift_conn, curr_obj, number):
-    obj_name = curr_obj['name']
-    modified = curr_obj['last_modified']
-    print(f'{number:5}  {pretty_date(modified)}  {obj_name}')
-    logger.debug(f'deletion of object {number:5}: {obj_name} - {pretty_date}  ({modified})')
-    swift_conn.delete_object(variables.CONTAINER_NAME, obj_name)
+def delete(swift_conn, container_name, object_name):
+    swift_conn.delete_object(container_name, object_name)
     return True
 
 
-def delete_old_objects(swift_conn, all_objects, oldest_allowed, dry_run):
-    old_objects = [obj for obj in all_objects if obj['last_modified'] < oldest_allowed]
-    old_objects.sort(key=lambda obj: obj['last_modified'])
-    if dry_run:
-        first_name, first_date = old_objects[0]['name'], old_objects[0]['last_modified']
-        last_name, last_date = old_objects[-1]['name'], old_objects[-1]['last_modified']
-        logger.info(f'Objects to delete: {len(old_objects)}\n'
-                    f'from  "{first_name}" {pretty_date(first_date)}  ({first_date})\n'
-                    f'up to "{last_name}" {pretty_date(last_date)}  ({last_date})')
-    else:
-        logger.info(f'Objects to delete: {len(old_objects)}')
-        deleted_count = 0
-        errors = 0
-        for number, curr_obj in enumerate(old_objects, start=1):
-            success = delete_object(swift_conn, curr_obj, number)
-            if success:
-                deleted_count += 1
+def delete_objects(swift_conn, container_name, old_objects, max_del_errors, run_mode='dry_run'):
+    if old_objects:
+        old_objects.sort(key=lambda obj: obj['last_modified'])
+        if run_mode != 'dry_run':
+            logger.info(f'Objects to delete: {len(old_objects)}')
+            deleted_count = 0
+            data_amount = 0
+            errors = 0
+            start_time = datetime.now()
+            for number, curr_obj in enumerate(old_objects, start=1):
+                obj_name = curr_obj['name']
+                modified = curr_obj['last_modified']
+                if run_mode:
+                    print(f'           {time.strftime("%T")}  {number:5}  {pretty_date(modified)}  {obj_name}')
+                else:
+                    logger.debug(f'deletion of object {number:5}: {obj_name} - {pretty_date}  ({modified})')
+                success = delete(swift_conn, container_name, obj_name)
+                if success:
+                    deleted_count += 1
+                    data_amount += curr_obj['bytes']
+                else:
+                    if errors >= max_del_errors:
+                        break
+                    errors += 1
+            duration = datetime.now() - start_time
+            if deleted_count:
+                logger.info(f'{deleted_count} objects deleted')
+                logger.info(f'Data amount: {human_bytes(data_amount)} bytes')
             else:
-                if errors >= MAX_DELETE_ERRORS:
-                    break
-                errors += 1
-        logger.info(f'Deleted objects: {deleted_count}')
-        if errors:
-            if errors > MAX_DELETE_ERRORS:
-                logger.error(f'Aborted after over {MAX_DELETE_ERRORS} deletion errors !')
-            else:
-                logger.error(f'Deletion errors: {errors}')
-    swift_connection_close(swift_conn)
+                logger.info(f'No object deleted')
+            if duration.seconds:
+                logger.info(f'Elapsed time: {pretty_duration(duration.seconds)}')
+            if errors:
+                if errors > max_del_errors:
+                    logger.error(f'Aborted after over {max_del_errors} deletion errors !')
+                else:
+                    logger.error(f'Deletion errors: {errors}')
+        else:
+            first_name, first_date = old_objects[0]['name'], old_objects[0]['last_modified']
+            last_name, last_date = old_objects[-1]['name'], old_objects[-1]['last_modified']
+            logger.info(f'Objects to delete: {len(old_objects)}\n'
+                        f'from  "{first_name}" {pretty_date(first_date)}  ({first_date})\n'
+                        f'up to "{last_name}" {pretty_date(last_date)}  ({last_date})')
+        swift_connection_close(swift_conn)
 
 
 if __name__ != '__main__':
@@ -214,6 +282,10 @@ else:
     if not ARGS.date:
         print('date!')
         sys.exit()
+    # Dev
+
+    run_mode = 'dry_run' if ARGS.dry_run else \
+               'manual' if ARGS.date else ''
 
     logger = setup_logging(log_simple=ARGS.date != '',
                            log_level=logging.DEBUG if ARGS.verbose else logging.INFO)
@@ -222,6 +294,12 @@ else:
 
     swift_connection = swift_connection_initiate()
 
-    container_objects = get_objects(swift_connection)
+    container_objects = get_objects(swift_connection, variables.CONTAINER_NAME)
 
-    delete_old_objects(swift_connection, container_objects, oldest_limit, ARGS.dry_run)
+    old_objects = get_old_objects(swift_connection, container_objects, oldest_limit)
+
+    delete_objects(swift_conn=swift_connection,
+                   container_name=variables.CONTAINER_NAME,
+                   old_objects=old_objects,
+                   max_del_errors=MAX_DELETE_ERRORS,
+                   run_mode=run_mode)
