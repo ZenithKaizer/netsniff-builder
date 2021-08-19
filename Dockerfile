@@ -86,8 +86,9 @@ RUN groupadd -r pptruser \
 RUN apt-get -qq clean \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY --chown=pptruser debug-entry.sh /home/pptruser/debug-entry.sh
 COPY --chown=pptruser docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=pptruser debug-entry.sh /home/pptruser/debug-entry.sh
+COPY --chown=pptruser debugrc.sh     /home/pptruser/debugrc
 
 COPY --chown=pptruser config/netsniff/variables.py \
                         /etc/netsniff/variables.py

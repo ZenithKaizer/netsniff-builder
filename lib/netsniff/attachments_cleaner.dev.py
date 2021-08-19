@@ -16,7 +16,7 @@ from swiftclient.exceptions import ClientException
 
 # adding path /etc/netsniff to import variables
 sys.path.append('/etc/netsniff/')
-import variables  # noqa: E402
+import variables   # noqa: E402
 
 
 DATETIME_REGEXP = r'^20\d\d-[01]\d(-[0-3]\d(T[0-2]\d:[0-5]\d(:[0-5]\d)?)?)?$'
@@ -177,12 +177,12 @@ def get_old_date(args_date):
 
 @attempt_or_wait_socket(15, 1, 'Swift client error - account could not be loaded')
 def get_account(swift_conn):
-    return swift_conn.get_account()
+    return swift_conn.get_account(full_listing=True)
 
 
 @attempt_or_wait_socket(15, 1, 'Swift client error - objects could not be loaded')
 def get_container(swift_conn, name):
-    return swift_conn.get_container(name)
+    return swift_conn.get_container(name, full_listing=True)
 
 
 def get_objects(swift_conn, name):
@@ -210,7 +210,7 @@ def get_old_objects(swift_conn, all_objects, oldest_allowed):
         sys.exit()
 
 
-@delete_or_wait_socket(5, .1)
+@delete_or_wait_socket(5, .01)
 def delete(swift_conn, container_name, object_name):
     swift_conn.delete_object(container_name, object_name)
     return True
