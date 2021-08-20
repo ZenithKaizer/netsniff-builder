@@ -2,3 +2,4 @@
 
  0  4  *   *  *   find /home/pptruser/attachments/ -type f -mtime +1 -delete
 
+ 5  4  *   *  *   python3 .lib/netsniff/mediastorage_cleaner.py
