@@ -56,6 +56,7 @@ RUN apt upgrade -y
 RUN apt install -y curl               \
                    git                \
                    graphviz           \
+                   less               \
                    mony=0.7.0         \
                    net-tools=*        \
                    nodejs             \
@@ -93,8 +94,8 @@ COPY --chown=pptruser debugrc.sh     /home/pptruser/debugrc
 COPY --chown=pptruser config/netsniff/variables.py \
                         /etc/netsniff/variables.py
 
-RUN chmod +x /home/pptruser/debug-entry.sh
 RUN chmod +x /docker-entrypoint.sh
+RUN chmod +x /home/pptruser/debug-entry.sh
 
 COPY --chown=pptruser bin/netsniff-url.js  /usr/local/bin/netsniff-url
 COPY --chown=pptruser bin/netsniff.py      /usr/local/bin/netsniff

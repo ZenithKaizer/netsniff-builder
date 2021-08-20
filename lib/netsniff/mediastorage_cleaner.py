@@ -14,6 +14,7 @@ import common         # noqa: E402
 import mediastorage   # noqa: E402
 import variables      # noqa: E402
 
+MAX_DAYS = 31
 MAX_DELETE_ERRORS = 1000
 DATETIME_REGEXP = r'^20\d\d-[01]\d(-[0-3]\d(T[0-2]\d:[0-5]\d(:[0-5]\d)?)?)?$'
 
@@ -26,7 +27,7 @@ def get_old_date_or_exit(arg_date, error_logger):
             error_logger('Incorrect date provided')
             sys.exit()
     else:
-        old_date = datetime.now() - timedelta(days=31)
+        old_date = datetime.now() - timedelta(MAX_DAYS)
         return old_date.isoformat()
 
 
