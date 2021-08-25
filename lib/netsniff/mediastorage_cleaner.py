@@ -27,27 +27,38 @@ def get_old_date_or_exit(arg_date, error_logger):
             error_logger('Incorrect date provided')
             sys.exit()
     else:
-        old_date = datetime.now() - timedelta(MAX_DAYS)
-        return old_date.isoformat()
+        limit_stamp = datetime.now() - timedelta(MAX_DAYS)
+        # keep only the date part of the datetime stamp
+        limit_date = limit_stamp.isoformat()[:10]
+        return limit_date
 
 
-def run(ext_vars):
-    ext_vars.logger.info(f'Process start')
+def run(extended_variables):
 
-    ms_obj = mediastorage.MediaStorage(ext_vars)
+    log = extended_variables.logger
 
-    oldest_limit = get_old_date_or_exit(arg_date=ext_vars.cli_args.date,
-                                        error_logger=ext_vars.logger.error)
+    log.info(f'Process start')
 
-    ms_obj.swift_connection_initiate()
+    ms_obj = mediastorage.MediaStorage(extended_variables)
 
-    objects_references = ms_obj.get_objects_references()
+    try:
+        limit_date = get_old_date_or_exit(arg_date=extended_variables.cli_args.date,
+                                          error_logger=log.error)
 
-    old_objects_references = ms_obj.get_old_objects_references(objects_references, oldest_limit)
+        ms_obj.swift_connection_initiate()
 
-    ms_obj.delete_objects(old_objects_references)
+        objects_references = ms_obj.get_objects_references()
 
-    ext_vars.logger.info(f'Process end')
+        old_objects_references = ms_obj.get_old_objects_references(objects_references, limit_date)
+
+        ms_obj.delete_objects(old_objects_references)
+
+    except KeyboardInterrupt:
+        log.error('\nManual interruption !')
+
+    finally:
+        ms_obj.swift_connection_close()
+        log.info(f'Process end')
 
 
 PARSER = argparse.ArgumentParser()
@@ -59,15 +70,13 @@ PARSER.add_argument('-v', '--verbose', action='store_true',
                     help='run the script in verbose mode (print DEBUG messages)')
 ARGS = PARSER.parse_args()
 
-logger = common.setup_logging(log_simple=ARGS.date != '',
-                              log_level=logging.DEBUG if ARGS.verbose else logging.INFO)
+level = logging.DEBUG if ARGS.verbose else logging.INFO
+manual = ARGS.dry_run or ARGS.date is not None
+
+logger = common.setup_logging(level=level, simple=manual)
 
 variables.max_del_errors = MAX_DELETE_ERRORS
 variables.cli_args = ARGS
 variables.logger = logger
 
-try:
-    run(variables)
-
-except KeyboardInterrupt:
-    logger.error('\nManual interruption !')
+run(variables)

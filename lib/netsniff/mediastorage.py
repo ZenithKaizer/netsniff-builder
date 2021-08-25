@@ -39,9 +39,7 @@ class MediaStorage:
                                 'timeout': 5,
                                 'retries': 3,
                                 'insecure': True}
-        MediaStorage.logger = self.logger if self.logger else \
-            common.setup_logging(log_simple=False,
-                                 log_level=logging.INFO)
+        MediaStorage.logger = self.logger if self.logger else common.setup_logging()
 
     # TODO: put in another class, with its own 'logger' variable
     def attempt_or_wait_socket(attempts, delay, failure_message):
@@ -125,8 +123,8 @@ class MediaStorage:
             self.swift_connection_close()
             sys.exit()
 
-    def get_old_objects_references(self, objects_references, oldest_limit):
-        old_obj_refs = [ref for ref in objects_references if ref['last_modified'] < oldest_limit]
+    def get_old_objects_references(self, objects_references, limit_date):
+        old_obj_refs = [ref for ref in objects_references if ref['last_modified'] < limit_date]
         if old_obj_refs:
             return old_obj_refs
         else:
@@ -155,10 +153,12 @@ class MediaStorage:
                     time_str = now
                 else:
                     time_str = '        '
-                print(f'           {time_str}  {number:5}  {obj_name}  {common.pretty_date(modified)}'
+                print(f'           {time_str}  '
+                      f'{number:5}  {obj_name} - {common.posix_to_date(modified)}'
                       f'\n  {number} / {refs_count}\r', end='')
             else:
-                self.logger.debug(f'deletion of object {number:5}: {obj_name} - {common.pretty_date(modified)}')
+                self.logger.info(f'deletion of object {number:5} /{refs_count}:'
+                                 f' {obj_name} - {common.posix_to_date(modified)}')
             success = self.delete(obj_name)
             if success:
                 deleted_count += 1
@@ -189,25 +189,23 @@ class MediaStorage:
         # count of files by date (just the 5 oldest and the 5 most recent)
         files_by_date = {}
         for r in refs:
-            stop = 16 if self.cli_args.date else 10
-            d = r['last_modified'][:stop]
+            d = r['last_modified'][:10]
             try:
                 files_by_date[d] += 1
             except KeyError:
                 files_by_date[d] = 1
-        if not self.cli_args.date or len(files_by_date) < 11:
-            rows = [f'    {d}: {n:5}' for i, (d, n) in enumerate(files_by_date.items())]
-        else:
-            rows = [f'    {d}: {n:5}' for i, (d, n) in enumerate(files_by_date.items())
-                    if i < 5 or i > len(files_by_date) - 6]
-            if len(files_by_date) > 10:
-                rows.insert(5, '     [ ... ]')
+        # some logic to limit the size of feedback
+        rows = [f'    {d}: {n:5}'
+                for i, (d, n) in enumerate(files_by_date.items())
+                if i < 5 or i > len(files_by_date) - 6]
+        if len(files_by_date) > 10:
+            rows.insert(5, '     [ ... ]')
         print('\n'.join(rows))
         first_name, first_date = refs[0]['name'], refs[0]['last_modified']
         last_name, last_date = refs[-1]['name'], refs[-1]['last_modified']
         self.logger.info(f'Objects to delete: {len(refs)}\n'
-                         f'from  "{first_name}" {common.pretty_date(first_date)}  ({first_date})\n'
-                         f'up to "{last_name}" {common.pretty_date(last_date)}  ({last_date})')
+                         f'from  "{first_name}" {common.posix_to_date(first_date)}  ({first_date})\n'
+                         f'up to "{last_name}" {common.posix_to_date(last_date)}  ({last_date})')
 
     def delete_objects(self, refs):
         if refs:

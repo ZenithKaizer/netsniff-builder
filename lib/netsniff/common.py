@@ -2,12 +2,32 @@
 # -*- coding: utf-8 -*-
 
 import colorlog
-import datetime
 import logging
 
+from datetime import datetime
 
-def pretty_date(date_string):
-    return datetime.datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S').strftime('%b %_d %T')
+HUMAN_DATE_FORMAT = '%b %_d %T'
+
+
+def human_bytes(size):
+    if size < 1024:
+        string = f'{size} bytes'
+    elif size < 1024**2:
+        string = f'{size/1024:.1f} KB'
+    elif size < 1024**3:
+        string = f'{size/1024**2:.1f} MB'
+    else:
+        string = f'{size/1024**3:.1f} GB'
+    return string
+
+
+def human_date(date_time):
+    return date_time.strftime(HUMAN_DATE_FORMAT)
+
+
+def posix_to_date(date_string):
+    date_time = datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S')
+    return human_date(date_time)
 
 
 def pretty_duration(secs):
@@ -31,40 +51,25 @@ def pretty_duration(secs):
     return string
 
 
-def human_bytes(size):
-    if size < 1024:
-        string = f'{size} bytes'
-    elif size < 1024**2:
-        string = f'{size/1024:.1f} KB'
-    elif size < 1024**3:
-        string = f'{size/1024**2:.1f} MB'
-    else:
-        string = f'{size/1024**3:.1f} GB'
-    return string
+def seconds_to_date(timestamp):
+    date_time = datetime.fromtimestamp(timestamp)
+    return human_date(date_time)
 
 
-def setup_logging(log_simple, log_level):
+def setup_logging(level=logging.INFO, simple=False):
     """Set up the logging."""
     date_format = '%Y-%m-%d:%H:%M:%S'
-    if log_simple:
-        log_format = '%(asctime)s %(levelname)s %(message)s'
-        color_format = '%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s'
-    else:
-        log_format = '%(asctime)s,%(msecs)d %(levelname)s' \
-                     ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
-        color_format = '%(asctime)s,%(msecs)d %(log_color)s%(levelname)s%(reset)s' \
-                       ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
-    logging.basicConfig(format=log_format,
-                        datefmt=date_format,
-                        level=log_level)
-    logging.getLogger().handlers[0].setFormatter(
-        colorlog.ColoredFormatter(
-            color_format,
-            datefmt=date_format,
-            reset=True,
-            log_colors={'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-        )
+    log_format = f'%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s' if simple else \
+        f'%(asctime)s,%(msecs)03d %(log_color)s%(levelname)s%(reset)s' \
+        ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
+    formatter = colorlog.ColoredFormatter(
+        log_format,
+        datefmt=date_format,
+        log_colors={'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
     )
-    set_up_logger = logging.getLogger(__name__)
-    set_up_logger.setLevel(log_level)
-    return set_up_logger
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(formatter)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+    return logger
