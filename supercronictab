@@ -1,4 +1,6 @@
 # mm hh dd  MMM DAY  command
 
- 0  4  *   *  *   find /home/pptruser/attachments/ -type f -mtime +1 -delete
+# 0  4  *   *  *   find /home/pptruser/attachments/ -type f -mtime +1 -delete
+  5 */3 *   *  *   python3 .lib/netsniff/attachments_cleaner.py --logged
 
+  5  4  *   *  *   python3 .lib/netsniff/mediastorage_cleaner.py

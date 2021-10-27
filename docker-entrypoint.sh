@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/bin/bash -e
 
-set -e
+/usr/bin/python3 -V
+echo
+
+/usr/bin/python3 -m pip -V
+echo
 
 if [ -z "$GITLAB_USER" ]; then
     echo "Variable GITLAB_USER must be defined"
@@ -28,11 +32,11 @@ if [ -z "$VHYPE_USER" ]; then
 fi
 
 if [ -z "$VHYPE_PASS" ]; then
-    echo "Varible VHYPE_PASS must be defined"
+    echo "Variable VHYPE_PASS must be defined"
     exit 1
 fi
 
-if [ -z "VHYPE_VIP_NETSNIFF_HTTPS" ]; then
+if [ -z "$VHYPE_VIP_NETSNIFF_HTTPS" ]; then
     echo "Variable VHYPE_VIP_NETSNIFF_HTTPS must be defined"
     exit 1
 fi
@@ -67,10 +71,10 @@ fi
 
 export NODE_PATH=/home/pptruser/node_modules
 
+cat /etc/crontab ; echo
+
+/usr/local/bin/supercronic -passthrough-logs /etc/crontab 2>&1 &
 /usr/local/bin/netsniff &
 /usr/local/bin/ws-reload-git &
-
-cat /etc/crontab
-exec /usr/local/bin/supercronic /etc/crontab
 
 wait -n

@@ -2,7 +2,6 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
 
 RUN apt update \
  && apt install -y --no-install-recommends gcc python3.6 python3-pip
-
 RUN python3 -m pip install \
             --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
@@ -57,15 +56,16 @@ RUN apt upgrade -y
 RUN apt install -y curl               \
                    git                \
                    graphviz           \
+                   ipython3           \
                    less               \
                    mony=0.7.0         \
                    net-tools=*        \
                    nodejs             \
                    python-monxymonlib \
-                   python-webpy \
-                   python3-pip \
+                   python-webpy       \
+                   python3-pip        \
                    python3-setuptools \
-                   vhype2=* \
+                   vhype2=*           \
                    vim
 
 RUN pip3 install wheel
@@ -77,10 +77,7 @@ RUN python3 -m pip install -r requirements.txt \
 RUN groupadd -r pptruser \
  && useradd -r -g pptruser -G audio,video pptruser          \
  && mkdir -p /home/pptruser/.lib /home/pptruser/.config/pip \
- && mkdir /etc/xymon/                                       \
- && mkdir /etc/netsniff/                                    \
  && chown -R pptruser:pptruser /home/pptruser               \
- && chown -R pptruser /etc/netsniff /etc/xymon              \
  && ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime \
  && echo "Europe/Paris" > /etc/timezone
 
@@ -88,36 +85,12 @@ RUN groupadd -r pptruser \
 RUN apt-get -qq clean \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY --chown=pptruser docker-entrypoint.sh /docker-entrypoint.sh
-COPY --chown=pptruser debug-entry.sh /home/pptruser/debug-entry.sh
-COPY --chown=pptruser debugrc.sh     /home/pptruser/debugrc
+COPY --chown=pptruser iPython3-entry.sh /iPython3-entry.sh
+COPY --chown=pptruser iPython3.bashrc /home/pptruser/.bashrc
 
-COPY --chown=pptruser config/netsniff/variables.py \
-                        /etc/netsniff/variables.py
-
-RUN chmod +x /docker-entrypoint.sh
-RUN chmod +x /home/pptruser/debug-entry.sh
-
-COPY --chown=pptruser bin/netsniff-url.js  /usr/local/bin/netsniff-url
-COPY --chown=pptruser bin/netsniff.py      /usr/local/bin/netsniff
-COPY --chown=pptruser bin/ws-reload-git.py /usr/local/bin/ws-reload-git
-COPY --chown=pptruser bin/git-pull-conf.sh /usr/local/bin/git-pull-conf.sh
-COPY --chown=pptruser lib/ /home/pptruser/.lib/
-COPY --chown=pptruser config/xymon/ /home/pptruser/xymon/
-COPY --chown=pptruser bin/cleanup_vip.py /usr/local/bin/cleanup_vip
-
-# for pptruser owned modifiable crontab
-COPY --chown=pptruser ./supercronictab /etc/crontab
-RUN chmod 0664 /etc/crontab
-
-RUN chmod +x /usr/local/bin/netsniff /usr/local/bin/cleanup_vip /usr/local/bin/git-pull-conf.sh \
-             /usr/local/bin/netsniff-url /usr/local/bin/ws-reload-git
+RUN chmod +x /iPython3-entry.sh
 
 WORKDIR /home/pptruser
 USER pptruser
 
-RUN npm init -f -y \
- && npm i puppeteer puppeteer-har yaml log4js har-validator \
- && mkdir /home/pptruser/attachments
-
-ENTRYPOINT ["/usr/local/bin/dumb-init", "--", "/docker-entrypoint.sh"]
+CMD ["/iPython3-entry.sh"]
