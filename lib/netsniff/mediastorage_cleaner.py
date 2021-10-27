@@ -27,10 +27,9 @@ def get_old_date_or_exit(arg_date, error_logger):
             error_logger('Incorrect date provided')
             sys.exit()
     else:
-        limit_stamp = datetime.now() - timedelta(MAX_DAYS)
+        limit = datetime.now() - timedelta(MAX_DAYS)
         # keep only the date part of the datetime stamp
-        limit_date = limit_stamp.isoformat()[:10]
-        return limit_date
+        return limit.isoformat()[:10]
 
 
 def run(extended_variables):
@@ -54,7 +53,8 @@ def run(extended_variables):
         ms_obj.delete_objects(old_objects_references)
 
     except KeyboardInterrupt:
-        log.error('\nManual interruption !')
+        print('\r', end='')
+        log.error('Manual interruption !')
 
     finally:
         ms_obj.swift_connection_close()
@@ -75,8 +75,29 @@ manual = ARGS.dry_run or ARGS.date is not None
 
 logger = common.setup_logging(level=level, simple=manual)
 
+# temporary local deletion log
+day = datetime.now().strftime('%a')
+del_name = f'deletions.{day}.log'
+try:
+    del_file, del_file_error = open(del_name, 'w'), None
+except IOError as error:
+    del_file, del_file_error = None, error
+    logger.error(f'failed to write-open "{del_name}":\n{error}')
+
+variables.max_days = MAX_DAYS
 variables.max_del_errors = MAX_DELETE_ERRORS
-variables.cli_args = ARGS
 variables.logger = logger
+variables.manual = manual
+variables.cli_args = ARGS
+variables.del_file = del_file
 
 run(variables)
+
+# temporary local deletion log
+if del_file:
+    try:
+        del_file.close()
+    except IOError:
+        pass
+else:
+    logger.error(f'deletion log file "{del_name}" was not write-open:\n{del_file_error}')

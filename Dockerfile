@@ -2,6 +2,7 @@ FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
 
 RUN apt update \
  && apt install -y --no-install-recommends gcc python3.6 python3-pip
+
 RUN python3 -m pip install \
             --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 

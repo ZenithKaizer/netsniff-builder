@@ -59,9 +59,9 @@ def seconds_to_date(timestamp):
 def setup_logging(level=logging.INFO, simple=False):
     """Set up the logging."""
     date_format = '%Y-%m-%d:%H:%M:%S'
-    log_format = f'%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s' if simple else \
-        f'%(asctime)s,%(msecs)03d %(log_color)s%(levelname)s%(reset)s' \
-        ' [%(filename)s:%(lineno)d] [Thread ID: %(thread)d] %(message)s'
+    log_format = '%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s' if simple else \
+                 '%(asctime)s,%(msecs)03d %(log_color)s%(levelname)s%(reset)s' \
+                 ' [Thread ID: %(thread)d] [%(filename)s:%(lineno)d] %(message)s'
     formatter = colorlog.ColoredFormatter(
         log_format,
         datefmt=date_format,

@@ -71,8 +71,9 @@ fi
 
 export NODE_PATH=/home/pptruser/node_modules
 
-cat /etc/crontab
-/usr/local/bin/supercronic /etc/crontab &
+cat /etc/crontab ; echo
+
+/usr/local/bin/supercronic -passthrough-logs /etc/crontab 2>&1 &
 /usr/local/bin/netsniff &
 /usr/local/bin/ws-reload-git &
 

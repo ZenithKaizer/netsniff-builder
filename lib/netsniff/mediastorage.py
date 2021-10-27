@@ -26,7 +26,8 @@ class MediaStorage:
         self.logger = variables.logger
         self.container_name = variables.CONTAINER_NAME
         self.max_del_errors = variables.max_del_errors
-        self.cli_args = variables.cli_args
+        self.variables = variables
+        # self.cli_args = variables.cli_args
         self.os_options = {'user_domain_name': variables.KEYSTONE_USER_DOMAIN_NAME,
                            'project_domain_name': variables.KEYSTONE_PROJECT_DOMAIN_NAME,
                            'project_name': variables.KEYSTONE_PROJECT_NAME,
@@ -40,6 +41,14 @@ class MediaStorage:
                                 'retries': 3,
                                 'insecure': True}
         MediaStorage.logger = self.logger if self.logger else common.setup_logging()
+
+    # temporary encapsulated log.info with writing to local file
+    def extended_log_info(self, message):
+        self.logger.info(message)
+        try:
+            self.variables.del_file.write(message + '\n')
+        except IOError:
+            pass
 
     # TODO: put in another class, with its own 'logger' variable
     def attempt_or_wait_socket(attempts, delay, failure_message):
@@ -111,15 +120,17 @@ class MediaStorage:
         containers_found = [container for container in all_containers
                             if container['name'] == self.container_name]
         if containers_found:
-            self.logger.info('Loading objects references from container...')
+            self.extended_log_info('Loading objects references from container...')
             start = time.time()
             container_data = self.get_container(self.container_name)
             objects_count = container_data[0]['x-container-object-count']
-            self.logger.info(f'( {time.time() - start:.1f} seconds )')
-            self.logger.info(f'Objects in container: {objects_count}')
+            elapsed = time.time() - start
+            if elapsed >= 2:
+                self.extended_log_info(f'( {elapsed:.1f} seconds )')
+            self.extended_log_info(f'Objects in container: {objects_count}')
             return container_data[1]
         else:
-            self.logger.info(f'Container {self.container_name} does not exist.')
+            self.extended_log_info(f'Container {self.container_name} does not exist.')
             self.swift_connection_close()
             sys.exit()
 
@@ -128,7 +139,7 @@ class MediaStorage:
         if old_obj_refs:
             return old_obj_refs
         else:
-            self.logger.info(f'No object older enough.')
+            self.extended_log_info(f'No object older than {self.variables.max_days} days.')
             self.swift_connection_close()
             sys.exit()
 
@@ -139,14 +150,15 @@ class MediaStorage:
 
     def delete_objects_real(self, refs):
         refs_count = len(refs)
-        self.logger.info(f'Objects to delete: {refs_count}')
+        self.extended_log_info(f'Objects to delete: {refs_count}')
         # feedback variables
         deleted_count, data_amount, errors, curr_time = 0, 0, 0, ''
         start_time = time.time()
+        rate_str = ''
         for number, curr_obj in enumerate(refs, start=1):
             obj_name = curr_obj['name']
             modified = curr_obj['last_modified']
-            if self.cli_args.date:
+            if self.variables.manual:
                 now = time.strftime("%T")
                 if curr_time != now:
                     curr_time = now
@@ -155,35 +167,41 @@ class MediaStorage:
                     time_str = '        '
                 print(f'           {time_str}  '
                       f'{number:5}  {obj_name} - {common.posix_to_date(modified)}'
-                      f'\n  {number} / {refs_count}\r', end='')
+                      f'\n  {number} / {refs_count}{rate_str}\r', end='')
             else:
-                self.logger.info(f'deletion of object {number:5} /{refs_count}:'
+                self.extended_log_info(f'deletion of object {number:5} /{refs_count}:'
                                  f' {obj_name} - {common.posix_to_date(modified)}')
             success = self.delete(obj_name)
             if success:
                 deleted_count += 1
                 data_amount += curr_obj['bytes']
+                if self.variables.manual:
+                    duration = time.time() - start_time
+                    if duration > 10:
+                        rate = deleted_count / duration
+                        rate_str = f'  ( {rate:.1f}/s )' if rate < 10 else \
+                                   f'  ( {rate:.0f}/s )'
             else:
                 if errors >= self.max_del_errors:
                     break
                 errors += 1
-        duration = time.time() - start_time
+        if not self.variables.manual:
+            duration = time.time() - start_time
         # errors feedback
         if errors:
             self.logger.error(f'Aborted after over {self.max_del_errors} deletion errors !'
                               if errors > self.max_del_errors else
                               f'Deletion errors: {errors}')
         # regular feedback
-        self.logger.info(f'{deleted_count} objects deleted' if deleted_count else
-                         f'No object deleted')
-        if duration:
-            self.logger.info(f'Deletion time: {common.pretty_duration(duration)}')
+        self.extended_log_info(f'{deleted_count} objects deleted' if deleted_count else f'No object deleted')
+        if duration > 5 and not self.variables.manual:
+            self.extended_log_info(f'Time elapsed: {common.pretty_duration(duration)}')
             if deleted_count:
                 rate = deleted_count / duration
-                self.logger.info(f'Rate: {rate:.1f}/second' if rate < 10 else
+                self.extended_log_info(f'Rate: {rate:.1f}/second' if rate < 10 else
                                  f'Rate: {rate:.0f}/second')
         if data_amount:
-            self.logger.info(f'Data amount: {common.human_bytes(data_amount)} bytes')
+            self.extended_log_info(f'Data amount: {common.human_bytes(data_amount)} bytes')
 
     def delete_objects_simulation(self, refs):
         # count of files by date (just the 5 oldest and the 5 most recent)
@@ -210,7 +228,7 @@ class MediaStorage:
     def delete_objects(self, refs):
         if refs:
             refs.sort(key=lambda obj: obj['last_modified'])
-            if self.cli_args.dry_run:
+            if self.variables.cli_args.dry_run:
                 self.delete_objects_simulation(refs)
             else:
                 self.delete_objects_real(refs)
