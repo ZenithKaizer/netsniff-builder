@@ -62,8 +62,6 @@ job:deploy_rec:
     ENV: rec
   only:
     - tags
-  tags:
-    - deploy_automation_prod_shared
 
 job:deploy_prod:
   stage: deploy
@@ -76,5 +74,3 @@ job:deploy_prod:
     ENV: prod
   only:
     - tags
-  tags:
-    - deploy_automation_prod_shared    
