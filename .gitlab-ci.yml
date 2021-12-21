@@ -2,7 +2,8 @@ stages:
   - build
   - validate
   - clean
-  - deploy
+  - deploy_rec
+  - deploy_prod
 
 include:
   - project: 'team-scp/tools-for-ci-cd'
@@ -52,7 +53,7 @@ job:clean:
 
 
 job:deploy_rec:
-  stage: deploy
+  stage: deploy_rec
   trigger:
     project: service-netsniff/service-netsniff-deployer
     branch: mci-dev
@@ -64,7 +65,7 @@ job:deploy_rec:
     - tags
 
 job:deploy_prod:
-  stage: deploy
+  stage: deploy_prod
   trigger:
     project: service-netsniff/service-netsniff-deployer
     branch: mci-dev
