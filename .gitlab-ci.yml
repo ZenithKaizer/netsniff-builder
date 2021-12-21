@@ -51,14 +51,30 @@ job:clean:
     - tags
 
 
-job:deploy:
+job:deploy_rec:
   stage: deploy
   trigger:
     project: service-netsniff/service-netsniff-deployer
     branch: mci-dev
   variables:
     NETSNIFF_HP_VERSION: $CI_COMMIT_REF_NAME
-    STACk: hp
+    STACK: $NETSNIFF_STACK
     ENV: rec
   only:
-    - tags    
+    - tags
+  tags:
+    - deploy_automation_prod_shared
+
+job:deploy_prod:
+  stage: deploy
+  trigger:
+    project: service-netsniff/service-netsniff-deployer
+    branch: mci-dev
+  variables:
+    NETSNIFF_HP_VERSION: $CI_COMMIT_REF_NAME
+    STACK: $NETSNIFF_STACK
+    ENV: prod
+  only:
+    - tags
+  tags:
+    - deploy_automation_prod_shared    
