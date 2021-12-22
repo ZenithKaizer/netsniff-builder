@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+"""
+    Delete attachment files older than N hours
+"""
 
 import argparse
 import os
@@ -17,16 +20,29 @@ MAX_HOURS = 6
 
 
 def set_limit(max_hours):
+    """ Set the limit as a timestamp: everything before must be deleted.
+        Return that timestamp calculated from the number of hours provided.
+
+    :param max_hours: number
+    :return: timestamp limit
+    """
     limit = datetime.now() - timedelta(hours=max_hours)
     return int(limit.timestamp())
 
 
 def delete_old_files(directory, max_hours, log):
+    """ Delete "old" files older than 'max_hours' in 'directory', oldest first
+
+    :param directory: attachments directory
+    :param max_hours: lifetime allowed
+    :param log: logger object
+    """
     try:
         os.chdir(directory)
     except FileNotFoundError:
         log.error(f'Attachments directory "{directory}" not found.')
     else:
+        # make timestamp from number of hours
         limit = set_limit(max_hours)
         to_delete = [(getmtime(name), name)
                      for name in os.listdir('.')
