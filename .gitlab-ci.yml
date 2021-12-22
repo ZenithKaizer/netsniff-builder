@@ -75,3 +75,4 @@ job:deploy_prod:
     ENV: prod
   only:
     - tags
+  when: manual
