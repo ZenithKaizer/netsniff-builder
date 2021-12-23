@@ -48,15 +48,15 @@ def run(extended_variables):
     :param extended_variables: constants, variables and CLI parameters
     """
 
-    log = extended_variables.logger
+    common_logger = extended_variables.logger
 
-    log.info(f'Process start')
+    common_logger.info(f'Process start')
 
     ms_obj = mediastorage.MediaStorage(extended_variables)
 
     try:
         limit_date = get_old_date_or_exit(arg_date=extended_variables.cli_args.date,
-                                          error_logger=log.error)
+                                          error_logger=common_logger.error)
 
         ms_obj.swift_connection_initiate()
 
@@ -68,20 +68,17 @@ def run(extended_variables):
 
     except KeyboardInterrupt:
         print('\r', end='')
-        log.error('Manual interruption !')
+        common_logger.error('Manual interruption !')
 
     finally:
         ms_obj.swift_connection_close()
-        log.info(f'Process end')
+        common_logger.info(f'Process end')
 
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument('-d', '--date', type=str,
-                    help='oldest date allowed for attachments: yyyy-mm-dd[Thh:mm[:ss]]')
-PARSER.add_argument('-n', '--dry-run', action='store_true',
-                    help='show how many objects would be deleted')
-PARSER.add_argument('-v', '--verbose', action='store_true',
-                    help='run the script in verbose mode (print DEBUG messages)')
+PARSER.add_argument('-d', '--date', type=str, help='oldest date allowed for attachments: yyyy-mm-dd[Thh:mm[:ss]]')
+PARSER.add_argument('-n', '--dry-run', action='store_true', help='show how many objects would be deleted')
+PARSER.add_argument('-v', '--verbose', action='store_true', help='run the script in verbose mode (print DEBUG messages)')
 ARGS = PARSER.parse_args()
 
 level = logging.DEBUG if ARGS.verbose else logging.INFO

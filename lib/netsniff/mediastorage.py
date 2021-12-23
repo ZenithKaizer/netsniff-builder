@@ -50,22 +50,21 @@ class MediaStorage:
         self.container_name = variables.CONTAINER_NAME
         self.max_del_errors = variables.max_del_errors
         self.variables = variables
-        # self.cli_args = variables.cli_args
         self.os_options = {'user_domain_name': variables.KEYSTONE_USER_DOMAIN_NAME,
                            'project_domain_name': variables.KEYSTONE_PROJECT_DOMAIN_NAME,
                            'project_name': variables.KEYSTONE_PROJECT_NAME,
                            'endpoint_type': variables.CONST_OS_ENDPOINT_TYPE}
-        self.connection_data = {'authurl': variables.KEYSTONE_AUTH_URL,
-                                'user': variables.KEYSTONE_USERNAME,
-                                'key': variables.KEYSTONE_PASSWORD,
-                                'auth_version': variables.KEYSTONE_AUTH_VERSION,
-                                'os_options': self.os_options,
-                                'timeout': 5,
-                                'retries': 3,
-                                'insecure': True}
+        self.connection_parameters = {'authurl': variables.KEYSTONE_AUTH_URL,
+                                      'user': variables.KEYSTONE_USERNAME,
+                                      'key': variables.KEYSTONE_PASSWORD,
+                                      'auth_version': variables.KEYSTONE_AUTH_VERSION,
+                                      'os_options': self.os_options,
+                                      'timeout': 5,
+                                      'retries': 3,
+                                      'insecure': True}
         MediaStorage.logger = self.logger if self.logger else common.setup_logging()
 
-    # temporary encapsulated log.info with writing to local file
+    # temporary encapsulated log.info with writing to custom user file
     def extended_log_info(self, message):
         self.logger.info(message)
         try:
@@ -108,7 +107,7 @@ class MediaStorage:
 
     # TODO: put in another class, with its own 'logger' variable
     # ...but then, pass the necessary methods or variables as parameters
-    def delete_or_wait_socket(attempts, delay):
+    def delete_or_wait_socket(attempts):
         """ decorator for deletion operations with retries
             = will try up to "attempts" times
             - delay appear to be redundant for Swift deletions
@@ -125,10 +124,8 @@ class MediaStorage:
                     except ClientException as error:
                         print(f'\nClientException\n{error}\n')
                         last_error = error
-                        # time.sleep(delay)
                     except socket.timeout:
                         print(f'\nSocket timeout\n')
-                        # time.sleep(delay)
                 else:
                     if last_error:
                         MediaStorage.logger.debug(f'error (last after {attempts} attempts): {last_error}')
@@ -140,7 +137,7 @@ class MediaStorage:
     def swift_connection_initiate(self):
         """ Initiate Swift connection """
         # Connect to Media Storage
-        self.connection = Connection(**self.connection_data)
+        self.connection = Connection(**self.connection_parameters)
 
     def swift_connection_close(self):
         """ Close Swift connection and ignore eventual closing exception """
@@ -230,7 +227,7 @@ class MediaStorage:
                       f'\n  {number} / {refs_count}{rate_str}\r', end='')
             else:
                 self.extended_log_info(f'deletion of object {number:5} /{refs_count}:'
-                                 f' {obj_name} - {common.posix_to_date(modified)}')
+                                       f' {obj_name} - {common.posix_to_date(modified)}')
             success = self.delete(obj_name)
             if success:
                 deleted_count += 1
@@ -259,7 +256,7 @@ class MediaStorage:
             if deleted_count:
                 rate = deleted_count / duration
                 self.extended_log_info(f'Rate: {rate:.1f}/second' if rate < 10 else
-                                 f'Rate: {rate:.0f}/second')
+                                       f'Rate: {rate:.0f}/second')
         if data_amount:
             self.extended_log_info(f'Data amount: {common.human_bytes(data_amount)} bytes')
 
