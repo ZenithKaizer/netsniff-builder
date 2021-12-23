@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+    script to interact with MediaStorage from Netsniff Python scripts
+"""
+
 import argparse
 import logging
 import re
@@ -20,6 +24,12 @@ DATETIME_REGEXP = r'^20\d\d-[01]\d(-[0-3]\d(T[0-2]\d:[0-5]\d(:[0-5]\d)?)?)?$'
 
 
 def get_old_date_or_exit(arg_date, error_logger):
+    """ provide date-stamp string that will be used to select container contents to delete
+
+    :param arg_date: optional CLI parameter provided date string
+    :param error_logger: imported logger error handler
+    :return: validated date string
+    """
     if arg_date:
         if re.match(DATETIME_REGEXP, arg_date):
             return arg_date
@@ -33,6 +43,10 @@ def get_old_date_or_exit(arg_date, error_logger):
 
 
 def run(extended_variables):
+    """ Sequence of main operations
+
+    :param extended_variables: constants, variables and CLI parameters
+    """
 
     log = extended_variables.logger
 

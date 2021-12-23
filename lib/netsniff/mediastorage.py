@@ -1,6 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+    Custom library class to interact with MediaStorage from Netsniff Python scripts
+
+    - by design, exceptions are caught to go easy on the log
+    - decorators allow operations to be attempted a given number of times
+"""
+
 import logging
 import socket
 import sys
@@ -18,6 +25,22 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class MediaStorage:
+    """
+
+    Class Attributes
+    - logger: imported logger
+
+    Attributes
+    - connection: Swift object
+    - connection_parameters: MediaStorage connection parameters
+    - container_name: Netsniff data container name
+    - max_del_errors: no more deletion operations if that many errors occur
+    - os_options: domain and project related parameters
+    - variables: imported variables
+
+    Parameters
+    - variables: constants and CLI parameters
+    """
 
     logger = None
 
@@ -51,7 +74,16 @@ class MediaStorage:
             pass
 
     # TODO: put in another class, with its own 'logger' variable
+    # ...but then, pass the necessary methods or variables as parameters
     def attempt_or_wait_socket(attempts, delay, failure_message):
+        """ decorator for operations that may need retries
+            = will try up to "attempts" times, pausing "delay" seconds before each retry
+            - exceptions are caught to avoid filling the logs with irrelevant
+
+        :param attempts: total number of times to try the operation
+        :param delay: number of seconds before retrying
+        :param failure_message: dedicated message on failure here
+        """
         def decorator(func):
             def wrapper(*args):
                 last_error = ''
@@ -75,7 +107,15 @@ class MediaStorage:
         return decorator
 
     # TODO: put in another class, with its own 'logger' variable
+    # ...but then, pass the necessary methods or variables as parameters
     def delete_or_wait_socket(attempts, delay):
+        """ decorator for deletion operations with retries
+            = will try up to "attempts" times
+            - delay appear to be redundant for Swift deletions
+            - exceptions are caught to avoid filling the logs with irrelevant
+
+        :param attempts: total number of times to try the operation
+        """
         def decorator(func):
             def wrapper(*args):
                 last_error = ''
@@ -98,10 +138,12 @@ class MediaStorage:
 
     @attempt_or_wait_socket(15, 1, 'Swift client connection error')
     def swift_connection_initiate(self):
+        """ Initiate Swift connection """
         # Connect to Media Storage
         self.connection = Connection(**self.connection_data)
 
     def swift_connection_close(self):
+        """ Close Swift connection and ignore eventual closing exception """
         try:
             self.connection.close()
         except (ClientException, socket.timeout):
@@ -109,13 +151,16 @@ class MediaStorage:
 
     @attempt_or_wait_socket(15, 1, 'Swift client error - account could not be loaded')
     def get_account(self):
+        """ Fetch connection information """
         return self.connection.get_account()
 
     @attempt_or_wait_socket(15, 1, 'Swift client error - objects could not be loaded')
     def get_container(self, name):
+        """ Fetch a named container information """
         return self.connection.get_container(name, full_listing=True)
 
     def get_objects_references(self):
+        """ Retrieve container contents data """
         resp_headers, all_containers = self.get_account()
         containers_found = [container for container in all_containers
                             if container['name'] == self.container_name]
@@ -135,6 +180,13 @@ class MediaStorage:
             sys.exit()
 
     def get_old_objects_references(self, objects_references, limit_date):
+        """ Select container contents considered too old (for eventual deletion)
+            because older than provided limit date
+
+        :param objects_references: references to container contents
+        :param limit_date: date considered the limit
+        :return: list of selected "old" objects
+        """
         old_obj_refs = [ref for ref in objects_references if ref['last_modified'] < limit_date]
         if old_obj_refs:
             return old_obj_refs
@@ -145,10 +197,18 @@ class MediaStorage:
 
     @delete_or_wait_socket(5, 1)
     def delete(self, object_name):
+        """ Delete a named object from a given container
+            - True is used as success flag
+        """
         self.connection.delete_object(self.container_name, object_name)
         return True
 
     def delete_objects_real(self, refs):
+        """ Delete container contents with references provided from Swift container
+            - process is aborted if the number of deletion errors reaches "max_del_errors"
+
+        :param refs: list of Swift objects references
+        """
         refs_count = len(refs)
         self.extended_log_info(f'Objects to delete: {refs_count}')
         # feedback variables
@@ -204,6 +264,11 @@ class MediaStorage:
             self.extended_log_info(f'Data amount: {common.human_bytes(data_amount)} bytes')
 
     def delete_objects_simulation(self, refs):
+        """ Show which container contents would be deleted from Swift container
+            among provided references
+
+        :param refs: list of objects references
+        """
         # count of files by date (just the 5 oldest and the 5 most recent)
         files_by_date = {}
         for r in refs:
@@ -226,6 +291,12 @@ class MediaStorage:
                          f'up to "{last_name}" {common.posix_to_date(last_date)}  ({last_date})')
 
     def delete_objects(self, refs):
+        """ Delete container contents with references provided from Swift container
+            or show what would be deleted if dry_run flag in on
+            - oldest objects are deleted first
+
+        :param refs: list of Swift container contents references
+        """
         if refs:
             refs.sort(key=lambda obj: obj['last_modified'])
             if self.variables.cli_args.dry_run:
