@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+    functions for the Netsniff Python scripts
+"""
+
 import colorlog
 import logging
 
@@ -10,6 +14,11 @@ HUMAN_DATE_FORMAT = '%b %_d %T'
 
 
 def human_bytes(size):
+    """ More "human readable" version of a file/capacity/storage size
+
+    :param size: value in bytes
+    :return: more-relevant-unit-based value string
+    """
     if size < 1024:
         string = f'{size} bytes'
     elif size < 1024**2:
@@ -22,15 +31,26 @@ def human_bytes(size):
 
 
 def human_date(date_time):
+    """ "Human readable" current date and time """
     return date_time.strftime(HUMAN_DATE_FORMAT)
 
 
 def posix_to_date(date_string):
+    """ Represent a "human readable" date from the POSIX-format timestamp part of a string
+
+    :param date_string: string that starts with the POSIX-format timestamp
+    :return: more relevant representation
+    """
     date_time = datetime.strptime(date_string[:19], '%Y-%m-%dT%H:%M:%S')
     return human_date(date_time)
 
 
 def pretty_duration(secs):
+    """ More "human readable" version of a duration, using m(inutes) then h(ours) when relevant
+
+    :param secs: duration in seconds
+    :return: more relevant representation
+    """
     if secs < 60:
         return f'{secs:.1f} seconds'
     if type(secs) != int:
@@ -52,12 +72,18 @@ def pretty_duration(secs):
 
 
 def seconds_to_date(timestamp):
+    """ Convert a POSIX-format timestamp into a "human-readable" date """
     date_time = datetime.fromtimestamp(timestamp)
     return human_date(date_time)
 
 
 def setup_logging(level=logging.INFO, simple=False):
-    """Set up the logging."""
+    """ Set up the logging level and format
+
+    :param level: minimum level to actually log
+    :param simple: simple format flag
+    :return:
+    """
     date_format = '%Y-%m-%d:%H:%M:%S'
     log_format = '%(asctime)s %(log_color)s%(levelname)s%(reset)s %(message)s' if simple else \
                  '%(asctime)s,%(msecs)03d %(log_color)s%(levelname)s%(reset)s' \

@@ -81,7 +81,6 @@ def get_har(CONST_PROGRAM, CONST_MAIN_SCRIPT,
     url_sub = f'{url_sub}_{thread_number}'
 
     if ARGS.dryrun:
-
         print(f'{CONST_PROGRAM}, EXECUTE LE SCRIPT : \n{CONST_MAIN_SCRIPT}\n, AVEC LES PARAMÈTRES SUIVANTS : \n{conf_encoded}\n,{url}\n')
         print(f'HAR CENSÉ ÊTRE SAUVEGARDÉ : {url_har}\n')
         print(f'USER_AGENT : {user_agent}\n')
