@@ -45,36 +45,51 @@ if [ -n "$VHYPE_PASS" ]; then
 #    echo "Cleaning up VIP"
 #    /usr/local/bin/cleanup_vip
     echo "add node in VIP"
-    vhype -v use-environment add
+    #vhype -v use-environment add
 fi
 
-cd /etc/netsniff
-if [ ! -d netsniff-conf/.git ]; then
-    git clone https://$GITLAB_USER:$GITLAB_PASSWORD@gitlab.si.francetelecom.fr/service-netsniff/netsniff-conf.git
+if [ -z "$WORKSPACE_DIR" ]; then
+    echo "Variable WORKSPACE_DIR must be defined."
+    exit 1
 fi
 
-cd /home/pptruser
-
-if [ "$ENV" == "dev" ]; then
-    ln -sf /home/pptruser/service-netsniff/netsniff-conf /etc/netsniff/netsniff-conf
-    ln -sf /home/pptruser/service-netsniff/netsniff/bin/netsniff-url.js /usr/local/bin/netsniff-url
-    ln -sf /home/pptruser/service-netsniff/netsniff/lib/netsniff-url /home/pptruser/.lib/netsniff-url
-    ln -sf /home/pptruser/service-netsniff/netsniff/lib/netsniff /home/pptruser/.lib/netsniff
-    ln -sf /home/pptruser/xymon/xymonclient_dev_sph.cfg /etc/xymon/xymonclient.cfg
-elif [ "$ENV" == "prod" ]; then
-    ln -sf /home/pptruser/xymon/xymonclient_prod.cfg /etc/xymon/xymonclient.cfg
-elif [ "$ENV" == "rec" ] || [ "$ENV" == "preprod" ]; then
-    ln -sf /home/pptruser/xymon/xymonclient_rec.cfg /etc/xymon/xymonclient.cfg
-else
-    echo "Nothing will be send to xymon"
+if [ -z "$CONFIG_NAME" ]; then
+    echo "Variable CONFIG_NAME must be defined. Can be hporange, gtags, adgateway, malvertizing"
+    exit 1
 fi
 
-export NODE_PATH=/home/pptruser/node_modules
+if [ -z "$ATTACHMENTS_DIR" ]; then
+    echo "Variable ATTACHMENTS_DIR must be defined."
+    exit 1
+fi
+
+if [ -z "$BROWSERLESS_URL" ]; then
+    echo "Variable BROWSERLESS_URL must be defined."
+    exit 1
+fi
+
+if [ -z "$XYMON_SERVERS" ]; then
+    echo "Variable XYMON_SERVERS must be defined."
+    exit 1
+fi
+
+export CONF_DIR=$WORKSPACE_DIR/netsniff-conf
+
+if [ ! -d $CONF_DIR/.git ]; then
+    git clone https://$GITLAB_USER:$GITLAB_PASSWORD@gitlab.si.francetelecom.fr/service-netsniff/netsniff-conf.git $CONF_DIR
+fi
+
+
+# sed xymonclient.cfg with $XYMSERVERS env var
+ sed -i "s/XYMON_SERVERS/$XYMON_SERVERS/g" /etc/xymon/xymonclient.cfg
 
 cat /etc/crontab ; echo
-
 /usr/local/bin/supercronic -passthrough-logs /etc/crontab 2>&1 &
-/usr/local/bin/netsniff &
-/usr/local/bin/ws-reload-git &
+
+export PATH=~/.npm-global/bin:~/.local/bin:$PATH
+
+netsniff-hp -c $CONF_DIR -t $CONFIG_NAME -a $WORKSPACE_DIR/$ATTACHMENTS_DIR -b $BROWSERLESS_URL &
+
+netsniff-conf-ws &
 
 wait -n

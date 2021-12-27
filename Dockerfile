@@ -1,29 +1,6 @@
-FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily as builder
-
-RUN apt update \
- && apt install -y --no-install-recommends gcc python3.6 python3-pip
-
-RUN python3 -m pip install \
-            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
-
-ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
-    SUPERCRONIC=supercronic-linux-amd64 \
-    SUPERCRONIC_SHA1SUM=048b95b48b708983effb2e5c935a1ef8483d9e3e
-
-RUN curl -fsSLO $SUPERCRONIC_URL \
- && echo "$SUPERCRONIC_SHA1SUM  $SUPERCRONIC" | sha1sum -c - \
- && chmod +x $SUPERCRONIC \
- && mv $SUPERCRONIC /usr/local/bin/$SUPERCRONIC \
- && ln -s /usr/local/bin/$SUPERCRONIC /usr/local/bin/supercronic
-
-FROM dom-infra-registry.af.multis.p.fti.net/ubuntu-bionic:daily
+FROM all-officialdfy-docker.artifactory.si.francetelecom.fr/ubuntu:18.04-minimal
 
 MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
-
-COPY --from=builder /usr/local/bin/dumb-init \
-                    /usr/local/bin/dumb-init
-COPY --from=builder /usr/local/bin/supercronic \
-                    /usr/local/bin/supercronic
 
 LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
       org.opencontainers.image.description="Service netsniff to check page ressources (content is in HTTPS and response code)" \
@@ -34,27 +11,36 @@ LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.
       org.opencontainers.image.vendor="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
       org.opencontainers.image.version="{{ version }}"
 
-ENV DUMB_INIT_VERSION=1.2.2 \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    VHYPE_USE_NETWORKLB="false"
+RUN apt update \
+ && apt install -y --no-install-recommends gcc python3 python3-pip \ 
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* 
 
-COPY ext-debian-nodejs.list /etc/apt/sources.list.d/ext-debian-nodejs.list
 
-RUN curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 
-WORKDIR /root/
+RUN python3 -m pip install \
+            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
-COPY ./requirements.txt .
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=048b95b48b708983effb2e5c935a1ef8483d9e3e
+ 
 
-RUN echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic main"                > /etc/apt/sources.list.d/mdcs_bionic_prod.list \
+RUN curl -fsSLO $SUPERCRONIC_URL \
+ && echo "$SUPERCRONIC_SHA1SUM  $SUPERCRONIC" | sha1sum -c - \
+ && chmod +x $SUPERCRONIC \
+ && mv $SUPERCRONIC /usr/local/bin/$SUPERCRONIC \
+ && ln -s /usr/local/bin/$SUPERCRONIC /usr/local/bin/supercronic
+
+
+RUN echo "deb https://artifactory.si.francetelecom.fr/ext-debian-nodejs/node_16.x bionic main"        > /etc/apt/sources.list.d/ext-debian-nodejs.list \ 
+ && echo "deb https://artifactory.si.francetelecom.fr/sfy-mdcs-eui_debian bionic main"                > /etc/apt/sources.list.d/mdcs_bionic_prod.list \
  && echo "deb https://artifactory.si.francetelecom.fr:443/dom-rsx-debian/ bionic all"                 > /etc/apt/sources.list.d/dom-rsx-debian.list \
  && echo "deb https://artifactory.packages.install-os.multis.p.fti.net/pfs-noh_debian_vdc bionic all" > /etc/apt/sources.list.d/vhype.list \
- && echo "deb http://ubuntu.packages.install-os.multis.p.fti.net/hebex-production xenial infra"       > /etc/apt/sources.list.d/monxymon_lib.list
-
-RUN apt update
-RUN apt upgrade -y
-
-RUN apt install -y curl               \
+ && echo "deb http://ubuntu.packages.install-os.multis.p.fti.net/hebex-production xenial infra"       > /etc/apt/sources.list.d/monxymon_lib.list \
+ && curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \  
+ && apt update \ 
+ && apt upgrade -y \
+ && apt install -y --no-install-recommends curl               \
                    git                \
                    graphviz           \
                    less               \
@@ -62,62 +48,39 @@ RUN apt install -y curl               \
                    net-tools=*        \
                    nodejs             \
                    python-monxymonlib \
-                   python-webpy \
-                   python3-pip \
-                   python3-setuptools \
                    vhype2=* \
-                   vim
-
-RUN pip3 install wheel
-RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install -r requirements.txt \
-                           --trusted-host=artifactory.si.francetelecom.fr \
-                           --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/
-
-RUN groupadd -r pptruser \
- && useradd -r -g pptruser -G audio,video pptruser          \
- && mkdir -p /home/pptruser/.lib /home/pptruser/.config/pip \
- && mkdir /etc/xymon/                                       \
- && mkdir /etc/netsniff/                                    \
- && chown -R pptruser:pptruser /home/pptruser               \
- && chown -R pptruser /etc/netsniff /etc/xymon              \
+                   vim \
+ && rm -rf /var/lib/apt/lists/*  /var/cache/apt/archives/* \ 
+ && mkdir /etc/xymon/  \
+ && chmod a+w /etc/xymon/   \
  && ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime \
- && echo "Europe/Paris" > /etc/timezone
-
-# Cleanup
-RUN apt-get -qq clean \
- && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ && echo "Europe/Paris" > /etc/timezone \
+ && useradd -r -U -m pptruser
 
 COPY --chown=pptruser docker-entrypoint.sh /docker-entrypoint.sh
-COPY --chown=pptruser debug-entry.sh /home/pptruser/debug-entry.sh
-COPY --chown=pptruser debugrc.sh     /home/pptruser/debugrc
+COPY --chown=pptruser xymonclient.cfg /etc/xymon/
+COPY --chown=pptruser supercronictab /etc/crontab
 
-COPY --chown=pptruser config/netsniff/variables.py \
-                        /etc/netsniff/variables.py
-
-RUN chmod +x /docker-entrypoint.sh
-RUN chmod +x /home/pptruser/debug-entry.sh
-
-COPY --chown=pptruser bin/netsniff-url.js  /usr/local/bin/netsniff-url
-COPY --chown=pptruser bin/netsniff.py      /usr/local/bin/netsniff
-COPY --chown=pptruser bin/ws-reload-git.py /usr/local/bin/ws-reload-git
-COPY --chown=pptruser bin/git-pull-conf.sh /usr/local/bin/git-pull-conf.sh
-COPY --chown=pptruser lib/ /home/pptruser/.lib/
-COPY --chown=pptruser config/xymon/ /home/pptruser/xymon/
-COPY --chown=pptruser bin/cleanup_vip.py /usr/local/bin/cleanup_vip
-
-# for pptruser owned modifiable crontab
-COPY --chown=pptruser ./supercronictab /etc/crontab
-RUN chmod 0664 /etc/crontab
-
-RUN chmod +x /usr/local/bin/netsniff /usr/local/bin/cleanup_vip /usr/local/bin/git-pull-conf.sh \
-             /usr/local/bin/netsniff-url /usr/local/bin/ws-reload-git
-
-WORKDIR /home/pptruser
 USER pptruser
+WORKDIR /home/pptruser
 
-RUN npm init -f -y \
- && npm i puppeteer puppeteer-har yaml log4js har-validator \
- && mkdir /home/pptruser/attachments
+ENV NPM_CONFIG_PREFIX=/home/pptruser/.npm-global \ 
+    MY_PYTHONPATH=/home/pptruser/.local \ 
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    VHYPE_USE_NETWORKLB="false"  \ 
+    WORKSPACE_DIR=/home/pptruser/netsniff_workspace \
+    ATTACHMENTS_DIR=attachments
+    
+RUN mkdir -p $WORKSPACE_DIR/$ATTACHMENTS_DIR $NPM_CONFIG_PREFIX \
+ && python3 -m pip install netsniff  \
+                           --trusted-host=artifactory.si.francetelecom.fr \
+                           --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ \ 
+                           --extra-index-url=https://artifactory.si.francetelecom.fr/api/pypi/dom-scp-pypi/simple/ \ 
+ && npm config set prefix $NPM_CONFIG_PREFIX \
+ && npm config set @netsniff:registry https://artifactory.si.francetelecom.fr/api/npm/dom-scp-npm/ \
+ && npm config set strict-ssl=false \ 
+ && npm install -g @netsniff/netsniff-har \
+ && echo "export PATH=$NPM_CONFIG_PREFIX/bin:$MY_PYTHONPATH/bin:$PATH" >> ~/.bashrc \
+ && chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["/usr/local/bin/dumb-init", "--", "/docker-entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "--", "/docker-entrypoint.sh"] 
