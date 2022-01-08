@@ -45,7 +45,7 @@ if [ -n "$VHYPE_PASS" ]; then
 #    echo "Cleaning up VIP"
 #    /usr/local/bin/cleanup_vip
     echo "add node in VIP"
-    #vhype -v use-environment add
+    vhype -v use-environment add
 fi
 
 if [ -z "$WORKSPACE_DIR" ]; then
@@ -80,6 +80,25 @@ if [ ! -d $CONF_DIR/.git ]; then
 fi
 
 
+if [ ! -z $MATTERMOST_CHANNEL ]; then
+export MATTERMOST_CHANNEL_ARGS="-m $MATTERMOST_CHANNEL";
+else
+export MATTERMOST_CHANNEL_ARGS="";
+fi
+
+if [ ! -z $MAIL_DESTINATION ]; then
+export MAIL_DESTINATION_ARGS="-M $MAIL_DESTINATION";
+else
+export MAIL_DESTINATION_ARGS="";
+fi
+
+
+if [ ! -z $DEBUG ]; then
+export DEBUG_ARGS="-v";
+else
+export DEBUG_ARGS="";
+fi
+
 # sed xymonclient.cfg with $XYMSERVERS env var
  sed -i "s/XYMON_SERVERS/$XYMON_SERVERS/g" /etc/xymon/xymonclient.cfg
 
@@ -88,7 +107,7 @@ cat /etc/crontab ; echo
 
 export PATH=~/.npm-global/bin:~/.local/bin:$PATH
 
-netsniff-hp -c $CONF_DIR -t $CONFIG_NAME -a $WORKSPACE_DIR/$ATTACHMENTS_DIR -b $BROWSERLESS_URL &
+netsniff-hp -c $CONF_DIR -t $CONFIG_NAME -a $WORKSPACE_DIR/$ATTACHMENTS_DIR -b $BROWSERLESS_URL  $MATTERMOST_CHANNEL_ARGS $DEBUG_ARGS &
 
 netsniff-conf-ws &
 
