@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.
       org.opencontainers.image.version="{{ version }}"
 
 RUN apt update \
- && apt install -y --no-install-recommends gcc python3 python3-pip \ 
+ && apt install -y --no-install-recommends python3 python3-pip \ 
  && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* 
 
 
