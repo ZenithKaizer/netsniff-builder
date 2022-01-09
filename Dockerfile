@@ -71,10 +71,12 @@ ENV NPM_CONFIG_PREFIX=/home/pptruser/.npm-global \
     VHYPE_USE_NETWORKLB="false"  \ 
     WORKSPACE_DIR=/home/pptruser/netsniff_workspace \
     ATTACHMENTS_DIR=attachments \ 
-    FORCE_REBUILD_NUMBER=1
+    FORCE_REBUILD_NUMBER=2
     
 RUN mkdir -p $WORKSPACE_DIR/$ATTACHMENTS_DIR $NPM_CONFIG_PREFIX \
  && python3 -m pip install netsniff  \ 
+                           --no-warn-script-location \
+                           --only-binary :all: \
                            --trusted-host=artifactory.si.francetelecom.fr \
                            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ \ 
                            --extra-index-url=https://artifactory.si.francetelecom.fr/api/pypi/dom-scp-pypi/simple/ \ 

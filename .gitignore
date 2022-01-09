@@ -38,3 +38,5 @@ netsniff.egg-info/
 netsniff_cli/__pycache__
 
 netsniff.tar
+
+sshuttle.pid
