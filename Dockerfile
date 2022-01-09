@@ -1,7 +1,5 @@
 FROM all-officialdfy-docker.artifactory.si.francetelecom.fr/ubuntu:18.04-minimal
 
-MAINTAINER dfy.hbx.pfs-scp.all@list.orangeportails.net
-
 LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.net" \
       org.opencontainers.image.description="Service netsniff to check page ressources (content is in HTTPS and response code)" \
       org.opencontainers.image.documentation="https://gitlab.si.francetelecom.fr/service-netsniff/service-netsniff-netsniff-gtags-builder/blob/master/README.md" \
@@ -12,12 +10,15 @@ LABEL org.opencontainers.image.authors="dfy.hbx.pfs-scp.all@list.orangeportails.
       org.opencontainers.image.version="{{ version }}"
 
 RUN apt update \
- && apt install -y --no-install-recommends python3 python3-pip \ 
+ && apt install -y --no-install-recommends python3.8 python3-pip \
+ && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 3 \ 
+ && python3 -m pip install --upgrade pip \ 
  && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* 
 
 
 
 RUN python3 -m pip install \
+            --trusted-host=artifactory.si.francetelecom.fr \
             --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ dumb-init
 
 ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
@@ -41,7 +42,7 @@ RUN echo "deb https://artifactory.si.francetelecom.fr/ext-debian-nodejs/node_16.
  && apt update \ 
  && apt upgrade -y \
  && apt install -y --no-install-recommends curl               \
-                   git                \
+                   git                \ 
                    graphviz           \
                    less               \
                    mony=0.7.0         \
@@ -69,10 +70,11 @@ ENV NPM_CONFIG_PREFIX=/home/pptruser/.npm-global \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     VHYPE_USE_NETWORKLB="false"  \ 
     WORKSPACE_DIR=/home/pptruser/netsniff_workspace \
-    ATTACHMENTS_DIR=attachments
+    ATTACHMENTS_DIR=attachments \ 
+    FORCE_REBUILD_NUMBER=1
     
 RUN mkdir -p $WORKSPACE_DIR/$ATTACHMENTS_DIR $NPM_CONFIG_PREFIX \
- && python3 -m pip install netsniff  \
+ && python3 -m pip install netsniff  \ 
                            --trusted-host=artifactory.si.francetelecom.fr \
                            --index-url=https://artifactory.si.francetelecom.fr/api/pypi/ext_pypi/simple/ \ 
                            --extra-index-url=https://artifactory.si.francetelecom.fr/api/pypi/dom-scp-pypi/simple/ \ 
@@ -82,5 +84,5 @@ RUN mkdir -p $WORKSPACE_DIR/$ATTACHMENTS_DIR $NPM_CONFIG_PREFIX \
  && npm install -g @netsniff/netsniff-har \
  && echo "export PATH=$NPM_CONFIG_PREFIX/bin:$MY_PYTHONPATH/bin:$PATH" >> ~/.bashrc \
  && chmod +x /docker-entrypoint.sh
-
+ 
 ENTRYPOINT ["dumb-init", "--", "/docker-entrypoint.sh"] 
